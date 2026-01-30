@@ -1,0 +1,121 @@
+<?php
+
+namespace App\Core\Catalog\Services;
+
+use App\Models\Product;
+use App\Core\Catalog\Dto\ProductDto;
+use App\Core\Catalog\Actions\ProductAction;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\LengthAwarePaginator;
+
+final class ProductService
+{
+    // On injecte l'instance de l'Action ici
+    public function __construct(
+        private readonly ProductAction $action
+    ) {
+    }
+
+    public function createProduct(ProductDto $dto): Product
+    {
+        // ✅ Utilise -> au lieu de ::
+        return $this->action->create($dto);
+    }
+
+    public function updateProduct(Product $product, ProductDto $dto): Product
+    {
+        // ✅ Utilise -> au lieu de ::
+        return $this->action->update($product, $dto);
+    }
+    // --- RECHERCHE ET FILTRES DYNAMIQUE SELON LA LANGUE ---
+/**
+     * Liste les produits avec pagination et relations
+     * * @param int $perPage Nombre d'éléments par page
+     * @param array $filters Filtres optionnels (statut, catégorie, etc.)
+     */
+    public function getPaginatedProducts(int $perPage = 15, array $filters = []): LengthAwarePaginator
+    {
+        $query = Product::query()
+            ->with('category') // Eager loading pour la performance
+            ->latest();        // Trie par défaut du plus récent au plus ancien
+
+        // On n'affiche que les actifs par défaut, sauf si spécifié
+        if (!isset($filters['include_inactive'])) {
+            $query->where('is_active', true);
+        }
+
+        // Filtre rapide par catégorie si présent
+        $query->when($filters['category_id'] ?? null, function ($q, $categoryId) {
+            $q->where('category_id', $categoryId);
+        });
+
+        // Exécution de la pagination
+        return $query->paginate($perPage);
+    }
+    public function search(array $filters): LengthAwarePaginator
+    {
+        $query = Product::query();
+
+        // Récupère la langue en cours (ex: 'fr', 'en', 'ar')
+        $locale = app()->getLocale();
+
+        if (!empty($filters['search'])) {
+            $searchTerm = $filters['search'];
+
+            $query->where(function (Builder $q) use ($searchTerm, $locale) {
+                // 1. Recherche prioritaire dans la langue actuelle
+                $q->where("name->{$locale}", 'like', "%{$searchTerm}%")
+                    // 2. Recherche de secours dans les autres langues (optionnel mais conseillé)
+                    ->orWhere('name->fr', 'like', "%{$searchTerm}%")
+                    ->orWhere('name->en', 'like', "%{$searchTerm}%")
+                    // 3. Identifiants uniques (SKU, Slug)
+                    ->orWhere('sku', 'like', "%{$searchTerm}%")
+                    ->orWhere('slug', 'like', "%{$searchTerm}%");
+            });
+        }
+
+        // Filtre par catégorie
+        $query->when($filters['category_id'] ?? null, fn($q, $id) => $q->where('category_id', $id));
+
+        // Filtres Booléens (is_active, is_featured)
+        $query->when(isset($filters['is_active']), fn($q) => $q->where('is_active', $filters['is_active']));
+        $query->when(isset($filters['is_featured']), fn($q) => $q->where('is_featured', $filters['is_featured']));
+
+        // Gestion du tri (Optionnel mais très utile pour l'UX)
+        $sortField = $filters['sort_by'] ?? 'created_at';
+        $sortOrder = $filters['sort_order'] ?? 'desc';
+        $query->orderBy($sortField, $sortOrder);
+
+        // Gestion des Soft Deletes
+        if (($filters['trashed'] ?? null) === 'only') {
+            $query->onlyTrashed();
+        }
+
+        return $query->with('category')->paginate($filters['per_page'] ?? 15);
+    }
+    // --- APPELS VERS L'ACTION ---
+
+    public function toggleProductStatus(Product $product, string $type): bool
+    {
+        return match ($type) {
+            'active' => $this->action->toggleActive($product),
+            'featured' => $this->action->toggleFeatured($product),
+            default => false
+        };
+    }
+
+    public function softDeleteProduct(Product $product): bool
+    {
+        return $this->action->delete($product);
+    }
+
+    public function restoreProduct(int $id): bool
+    {
+        return $this->action->restore($id);
+    }
+
+    public function permanentlyDeleteProduct(int $id): bool
+    {
+        return $this->action->forceDelete($id);
+    }
+}
