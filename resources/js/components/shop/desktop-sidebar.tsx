@@ -8,9 +8,9 @@ export function DesktopSidebar({ auth }: { auth: any }) {
 
     const navItems = [
         { href: "/", icon: Home, label: "Home" },
-        { href: "/categories", icon: Grid, label: "Explore" },
-        { href: "/offers", icon: Tag, label: "Offers" },
-        { href: "/favorites", icon: Heart, label: "Saved" },
+        { href: "/explore", icon: Grid, label: "Explore" },
+        // { href: "/offers", icon: Tag, label: "Offers" },
+        // { href: "/favorites", icon: Heart, label: "Saved" },
     ];
 
     return (

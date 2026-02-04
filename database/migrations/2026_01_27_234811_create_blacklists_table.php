@@ -13,19 +13,16 @@ return new class extends Migration {
         Schema::create('blacklists', function (Blueprint $table) {
             $table->id();
 
-            // L'identifiant banni (soit l'email, soit l'ID du fingerprint)
-            $table->string('identifier')->unique()->index();
+            // On stocke la valeur bannie (IP, Email ou Fingerprint)
+            $table->string('identifier')->index();
 
-            // Le type de blocage pour faciliter la gestion en admin
-            // Valeurs possibles : 'email', 'fingerprint', 'ip'
-            $table->string('type');
+            // Type : 1=Email, 2=Fingerprint, 3=IP, 4=Phone
+            $table->unsignedTinyInteger('type')->index();
 
-            // Pourquoi cet utilisateur a été banni (utile pour l'admin)
             $table->text('reason')->nullable();
+            $table->json('metadata')->nullable(); // Pour stocker des preuves (ex: logs de l'attaque)
 
-            // Pour des blocages temporaires (optionnel)
-            $table->timestamp('expires_at')->nullable();
-
+            $table->timestamp('expires_at')->nullable()->index(); // Pour les bans temporaires
             $table->timestamps();
         });
     }

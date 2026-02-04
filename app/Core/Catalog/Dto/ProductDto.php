@@ -14,32 +14,46 @@ final class ProductDto
         public readonly ?string $sku,
         public readonly float $price,
         public readonly int $stock,
-        public readonly ?array $images,
+        public readonly array $image_files = [], // Array de UploadedFile
+        public readonly array $existing_images = [], // Chemins déjà en base (pour conservation)
         public readonly ?string $purity,
         public readonly bool $is_active = true,
         public readonly bool $is_featured = false,
-    ) {}
+    ) {
+    }
 
 public static function fromRequest(array $data): self
 {
     $purity = $data['purity'] ?? '99.9%';
-    // Si la pureté est fournie mais sans le symbole %, on l'ajoute
     if (!empty($purity) && !str_contains($purity, '%')) {
         $purity .= '%';
     }
+
+    // --- CORRECTION ICI ---
+    $existingImages = $data['existing_images'] ?? [];
+
+    // Si le front-end a envoyé un JSON string (via JSON.stringify dans React)
+    if (is_string($existingImages)) {
+        $decoded = json_decode($existingImages, true);
+        // On ne garde que si c'est un tableau valide, sinon on garde l'original ou vide
+        $existingImages = is_array($decoded) ? $decoded : ($existingImages ? [$existingImages] : []);
+    }
+    // -----------------------
 
     return new self(
         category_id: $data['category_id'],
         name: $data['name'],
         description: $data['description'] ?? null,
         unit: (string) ($data['unit'] ?? 'g'), 
-        meta: $data['meta'] ?? null,
+ // Au lieu de $data['meta'], on regarde ce qu'il y a vraiment dans la requête globale
+meta: request()->input('meta') ?? $data['meta'] ?? null,
         slug: $data['slug'] ?? '',
         sku: $data['sku'] ?? null,
         price: (float) $data['price'],
         stock: (int) $data['stock'],
-        images: $data['images'] ?? [],
-        purity: $purity, // Valeur nettoyée ici
+        image_files: request()->file('images') ?? [], 
+        existing_images: $existingImages, // Utilise la variable traitée
+        purity: $purity,
         is_active: (bool) ($data['is_active'] ?? true),
         is_featured: (bool) ($data['is_featured'] ?? false),
     );

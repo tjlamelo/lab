@@ -27,20 +27,14 @@ class Category extends Model
         'is_active' => 'boolean',
     ];
 
+ 
     /**
-     * Boot function pour générer le slug automatiquement
-     */
-    protected static function boot()
-    {
-        parent::boot();
-
-        static::creating(function ($category) {
-            // On génère le slug à partir du nom français par défaut lors de la création
-            if (empty($category->slug) && isset($category->name['fr'])) {
-                $category->slug = Str::slug($category->name['fr']);
-            }
-        });
-    }
+ * Utilise le slug au lieu de l'ID pour le Route Model Binding.
+ */
+public function getRouteKeyName(): string
+{
+    return 'slug';
+}
 
     /**
      * Relation : Une catégorie peut avoir plusieurs produits

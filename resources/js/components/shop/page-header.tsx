@@ -9,10 +9,7 @@ export function PageHeader() {
                 {/* Espace réservé pour un logo mobile ou titre si besoin */}
             </div>
 
-            {/* Centre : Search Bar (prend l'espace central) */}
-            <div className="flex-[2] flex justify-center items-center">
-                <SearchBar />
-            </div>
+       
 
             {/* Droite : Switcher de langue à l'extrémité */}
             <div className="flex-1 flex justify-end items-center gap-4">

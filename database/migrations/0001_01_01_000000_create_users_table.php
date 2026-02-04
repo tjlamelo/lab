@@ -19,13 +19,11 @@ return new class extends Migration {
             $table->string('password');
 
 
-            // Pour stocker l'empreinte du dernier navigateur utilisé
-            $table->string('last_fingerprint')->nullable()->index();
-
+            $table->boolean('is_active')->default(true);
             $table->rememberToken();
             $table->timestamps();
         });
-   
+
         Schema::create('password_reset_tokens', function (Blueprint $table) {
             $table->string('email')->primary();
             $table->string('token');

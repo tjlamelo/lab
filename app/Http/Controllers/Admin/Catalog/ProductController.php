@@ -13,7 +13,8 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
-
+use App\Core\Catalog\Actions\ProductSeoGenerator; // N'oublie pas l'import
+use Illuminate\Support\Facades\Log;
 class ProductController extends Controller
 {
     public function __construct(
@@ -64,14 +65,12 @@ public function index(Request $request): Response
     /**
      * Détails d'un produit
      */
-public function show(Product $product): Response
+public function show(Product $product, ProductSeoGenerator $seoGenerator): Response
 {
-{
-    // On charge la catégorie ici impérativement
+ 
     return Inertia::render('admin/catalog/show', [
-        'product' => new ProductResource($product->load('category'))
+        'product' => new ProductResource($product)
     ]);
-}
 }
 
     /**

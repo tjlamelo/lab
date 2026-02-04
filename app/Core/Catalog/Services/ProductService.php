@@ -93,6 +93,21 @@ final class ProductService
 
         return $query->with('category')->paginate($filters['per_page'] ?? 15);
     }
+
+    /**
+ * Récupère un produit par son Slug ou son ID avec ses relations
+ */
+public function findBySlugOrId(string|int $identifier): Product
+{
+    return Product::query()
+        ->with(['category']) // Charge la catégorie pour afficher le badge sur la page Show
+        ->where('is_active', true) // Sécurité : on ne veut pas qu'un client voie un produit désactivé via l'URL
+        ->where(function (Builder $q) use ($identifier) {
+            $q->where('slug', $identifier)
+              ->orWhere('id', $identifier);
+        })
+        ->firstOrFail(); // Renvoie une 404 si le produit n'existe pas ou est inactif
+}
     // --- APPELS VERS L'ACTION ---
 
     public function toggleProductStatus(Product $product, string $type): bool

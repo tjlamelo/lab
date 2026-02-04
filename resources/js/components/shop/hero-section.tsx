@@ -1,179 +1,201 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { SearchBar } from './search-bar';
 import { useTranslate } from '@/lib/i18n';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const PRODUCTS = [
-    { 
-        id: 1, 
-        name: 'Ethanol Absolute', 
-        formula: 'C₂H₆O', 
-        desc: 'Ultra-pure solvent for molecular biology and precise HPLC analysis.', 
-        color: '#4524DB', 
-        image: 'https://images.unsplash.com/photo-1581093583449-80d50ad9df23?auto=format&fit=crop&q=80&w=400', // Exemple flacon
-        purity: '99.9%' 
-    },
-    { 
-        id: 2, 
-        name: 'Sulfuric Acid', 
-        formula: 'H₂SO₄', 
-        desc: 'Premium analytical reagent designed for complex titration workflows.', 
-        color: '#E11D48', 
-        image: 'https://images.unsplash.com/photo-1581093196277-9f608e1ce52a?auto=format&fit=crop&q=80&w=400',
-        purity: '98.0%' 
-    },
-    { 
-        id: 3, 
-        name: 'Silver Nitrate', 
-        formula: 'AgNO₃', 
-        desc: 'High-sensitivity grade ideal for protein staining and photography.', 
-        color: '#0EA5E9', 
-        image: 'https://images.unsplash.com/photo-1603126857599-f6e157fa2fe6?auto=format&fit=crop&q=80&w=400',
-        purity: '99.5%' 
-    },
-    { 
-        id: 4, 
-        name: 'Magnesium Sulfate', 
-        formula: 'MgSO₄', 
-        desc: 'Expertly dried anhydrous reagent for organic synthesis drying.', 
-        color: '#10B981', 
-        image: 'https://images.unsplash.com/photo-1576086213369-97a306d36557?auto=format&fit=crop&q=80&w=400',
-        purity: '99.0%' 
-    },
-    { 
-        id: 5, 
-        name: 'Sodium Hydroxide', 
-        formula: 'NaOH', 
-        desc: 'Consistent pellets for precise pH stabilization in critical buffers.', 
-        color: '#F59E0B', 
-        image: 'https://images.unsplash.com/photo-1582719471384-894fbb16e074?auto=format&fit=crop&q=80&w=400',
-        purity: '97.5%' 
-    },
-];
+interface Product {
+    id: number;
+    slug: string;
+    name: string;
+    description: string;
+    images: string[];
+    purity?: string;
+    sku?: string;
+    color?: string;
+}
 
-export function HeroSection() {
+export function HeroSection({ products = [] }: { products: Product[] }) {
     const { __ } = useTranslate();
+    
+    // 1. DYNAMISME TOTAL : On prend tous les produits valides sans exception
+    const items = useMemo(() => {
+        return products.filter(p => p && p.id);
+    }, [products]);
+
     const [index, setIndex] = useState(0);
+    const [progress, setProgress] = useState(0);
+    const progressRef = useRef(0);
 
-    // Cycle automatique de 3 secondes
+    // 2. CYCLE DE DÉFILEMENT AUTO-ADAPTATIF
     useEffect(() => {
-        const timer = setInterval(() => {
-            setIndex((prev) => (prev + 1) % PRODUCTS.length);
-        }, 3000);
-        return () => clearInterval(timer);
-    }, []);
+        // Si aucun produit ou un seul, on ne lance pas le timer de défilement
+        if (items.length < 2) {
+            setProgress(0);
+            return;
+        }
 
-    const activeProduct = PRODUCTS[index];
+        const duration = 5000; // Temps d'exposition par produit
+        const step = 50; 
+        const increment = (step / duration) * 100;
+
+        const timer = setInterval(() => {
+            progressRef.current += increment;
+            
+            if (progressRef.current >= 100) {
+                progressRef.current = 0;
+                // Le modulo (%) items.length rend la boucle infinie peu importe le nombre
+                setIndex((prev) => (prev + 1) % items.length);
+            }
+            
+            setProgress(progressRef.current);
+        }, step);
+
+        return () => {
+            clearInterval(timer);
+            progressRef.current = 0;
+        };
+    }, [items.length]); // Réagit si la liste de produits change (ex: ajout en admin)
+
+    if (items.length === 0) return null;
+
+    const activeProduct = items[index];
+    // On utilise la couleur du produit si elle existe, sinon le noir/primaire du thème
+    const accentColor = activeProduct.color || 'var(--primary)';
+
+    const displayImage = useMemo(() => {
+        const img = activeProduct.images?.[0];
+        if (!img) return '/placeholder.png';
+        return img.startsWith('http') ? img : `/storage/${img}`;
+    }, [activeProduct]);
 
     return (
-        <section className="relative h-[100svh] w-full bg-[#FBFBFB] overflow-hidden flex flex-col items-center justify-center">
+        <section className="relative h-[calc(100vh-72px)] w-full bg-background overflow-hidden flex flex-col items-center justify-between">
             
-            {/* Background Texture & Soft Glow */}
-            <div className="absolute inset-0 z-0">
-                <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: `linear-gradient(to right, #4524DB 1px, transparent 1px), linear-gradient(to bottom, #4524DB 1px, transparent 1px)`, backgroundSize: '80px 80px' }} />
-                <motion.div 
-                    animate={{ backgroundColor: activeProduct.color }}
-                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-[600px] blur-[150px] rounded-full opacity-[0.04] transition-colors duration-1000" 
-                />
-            </div>
-
-            {/* Logo Statut / Badge */}
-            <div className="absolute top-12 z-30 flex flex-col items-center">
-                <span className="text-[10px] uppercase tracking-[0.4em] text-[#4524DB] font-black">PrimeLab Reagents</span>
-                <div className="h-px w-12 bg-[#4524DB]/20 mt-2" />
-            </div>
-
-            {/* Central Product Showcase */}
-            <div className="relative z-20 flex-1 w-full flex items-center justify-center pt-20">
+            {/* --- FOND RÉACTIF --- */}
+            <div className="absolute inset-0 z-0 pointer-events-none">
                 <AnimatePresence mode="wait">
                     <motion.div
-                        key={activeProduct.id}
-                        initial={{ x: 200, opacity: 0, filter: 'blur(10px)' }}
-                        animate={{ x: 0, opacity: 1, filter: 'blur(0px)' }}
-                        exit={{ x: -200, opacity: 0, filter: 'blur(10px)' }}
-                        transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-                        className="flex flex-col items-center"
-                    >
-                        {/* Flacon Image Container */}
-                        <motion.div 
-                            animate={{ y: [0, -15, 0] }}
-                            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                            className="relative w-64 h-80 md:w-80 md:h-[450px] flex items-center justify-center"
-                        >
-                            {/* Glow arrière image */}
-                            <div className="absolute inset-0 bg-white rounded-full blur-3xl opacity-50 scale-75" />
-                            
-                            <img 
-                                src={activeProduct.image} 
-                                alt={activeProduct.name}
-                                className="relative z-10 w-full h-full object-contain drop-shadow-[0_30px_50px_rgba(0,0,0,0.15)]"
-                            />
-
-                            {/* Info Badge Flottant */}
-                            <motion.div 
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                transition={{ delay: 0.4 }}
-                                className="absolute top-10 -right-10 bg-white border border-black/5 shadow-xl p-4 rounded-2xl rotate-12"
-                            >
-                                <p className="text-[10px] font-black uppercase text-[#4524DB] leading-none mb-1">Grade</p>
-                                <p className="text-sm font-bold text-black italic">Analytical</p>
-                            </motion.div>
-                        </motion.div>
-
-                        {/* Product Text Description */}
-                        <div className="mt-8 text-center max-w-xl px-6">
-                            <motion.h2 
-                                initial={{ y: 20, opacity: 0 }}
-                                animate={{ y: 0, opacity: 1 }}
-                                className="text-4xl md:text-5xl font-bold text-black tracking-tighter mb-2"
-                            >
-                                {activeProduct.name}
-                            </motion.h2>
-                            <motion.p 
-                                initial={{ y: 20, opacity: 0 }}
-                                animate={{ y: 0, opacity: 1 }}
-                                transition={{ delay: 0.1 }}
-                                className="text-[#4524DB] font-mono font-bold text-lg mb-4"
-                            >
-                                {activeProduct.formula} — {activeProduct.purity}
-                            </motion.p>
-                            <motion.p 
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 0.6 }}
-                                transition={{ delay: 0.2 }}
-                                className="text-black leading-relaxed font-light text-base md:text-lg"
-                            >
-                                {activeProduct.desc}
-                            </motion.p>
-                        </div>
-                    </motion.div>
+                        key={`glow-${activeProduct.id}`}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 0.15 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 1 }}
+                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] blur-[150px] rounded-full"
+                        style={{ backgroundColor: accentColor }}
+                    />
                 </AnimatePresence>
             </div>
 
-            {/* Bottom Search Bar Area */}
-            <div className="relative z-30 w-full max-w-[680px] px-6 pb-12">
-                <motion.div 
-                    initial={{ y: 40, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    className="bg-white/80 backdrop-blur-2xl rounded-[32px] p-2 shadow-[0_25px_50px_-12px_rgba(69,36,219,0.2)] border border-white outline outline-1 outline-black/[0.03]"
-                >
-                    <SearchBar placeholder={__('Search 12,000+ compounds by CAS or name...')} />
-                </motion.div>
+            {/* --- CONTENU --- */}
+            <div className="relative z-10 w-full max-w-7xl px-6 grid grid-cols-1 lg:grid-cols-2 flex-1 items-center gap-12 pt-10">
+                
+                {/* TEXTE DYNAMIQUE */}
+                <div className="order-2 lg:order-1 flex flex-col items-center lg:items-start text-center lg:text-left">
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={`content-${activeProduct.id}`}
+                            initial={{ x: -40, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            exit={{ x: 40, opacity: 0 }}
+                            transition={{ duration: 0.7, ease: [0.23, 1, 0.32, 1] }}
+                            className="max-w-xl space-y-6"
+                        >
+                            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-card/50 border border-border backdrop-blur-sm shadow-sm">
+                                <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                                <span className="text-[10px] font-extrabold tracking-[0.3em] uppercase text-muted-foreground">
+                                    {activeProduct.purity || __('New Arrival')}
+                                </span>
+                            </div>
+                            
+                            <h1 className="text-4xl md:text-6xl lg:text-8xl font-black tracking-tighter leading-[0.95] min-h-[2em] flex items-center">
+                                {activeProduct.name}
+                            </h1>
+
+                            <p className="text-muted-foreground text-lg md:text-2xl font-medium leading-relaxed line-clamp-3 min-h-[4em]">
+                                {activeProduct.description}
+                            </p>
+
+                            <motion.button 
+                                whileHover={{ scale: 1.05, y: -5 }}
+                                whileTap={{ scale: 0.95 }}
+                                className="px-12 py-5 rounded-2xl bg-primary text-primary-foreground font-black text-xl shadow-2xl shadow-primary/30"
+                            >
+                                {__('Shop Now')}
+                            </motion.button>
+                        </motion.div>
+                    </AnimatePresence>
+                </div>
+
+                {/* IMAGE DYNAMIQUE (TAILLE FIXE) */}
+                <div className="order-1 lg:order-2 flex justify-center items-center">
+                    <div className="relative w-[300px] h-[350px] md:w-[500px] md:h-[600px] flex items-center justify-center">
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={`img-${activeProduct.id}`}
+                                initial={{ scale: 0.7, opacity: 0, rotate: -10 }}
+                                animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                                exit={{ scale: 1.2, opacity: 0, rotate: 10 }}
+                                transition={{ type: "spring", stiffness: 90, damping: 15 }}
+                                className="w-full h-full flex items-center justify-center"
+                            >
+                                <motion.img 
+                                    animate={{ y: [0, -25, 0] }}
+                                    transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                                    src={displayImage} 
+                                    alt={activeProduct.name}
+                                    className="w-full h-full object-contain drop-shadow-[0_40px_80px_rgba(0,0,0,0.3)]"
+                                />
+                            </motion.div>
+                        </AnimatePresence>
+                    </div>
+                </div>
             </div>
 
-            {/* Custom Pagination Line */}
-            <div className="absolute bottom-6 flex gap-3">
-                {PRODUCTS.map((_, i) => (
-                    <motion.div 
-                        key={i} 
-                        className="h-1 rounded-full bg-[#4524DB]"
-                        animate={{ 
-                            width: i === index ? 32 : 8,
-                            opacity: i === index ? 1 : 0.2
-                        }}
-                    />
-                ))}
+            {/* --- NAVIGATION DYNAMIQUE (BAS) --- */}
+            <div className="relative z-30 w-full flex flex-col items-center gap-8 pb-8">
+                
+                {/* Search Bar flottante */}
+                <div className="w-full max-w-2xl px-6">
+                    <div className="bg-card/90 backdrop-blur-xl p-2 rounded-[2.5rem] shadow-2xl border border-border/50 group focus-within:border-primary transition-all">
+                        <SearchBar placeholder={__('Search products...')} />
+                    </div>
+                </div>
+
+                {/* Indicateurs : S'adaptent au nombre de produits (n barres pour n produits) */}
+                <div className="flex gap-3 px-4 flex-wrap justify-center">
+                    {items.map((_, i) => (
+                        <button 
+                            key={`nav-${i}`} 
+                            className="h-1.5 bg-muted rounded-full overflow-hidden relative transition-all duration-300"
+                            style={{ width: i === index ? '60px' : '30px' }} // La barre active est plus longue
+                            onClick={() => {
+                                setIndex(i);
+                                progressRef.current = 0;
+                                setProgress(0);
+                            }}
+                        >
+                            {i === index ? (
+                                <motion.div 
+                                    className="absolute inset-0 bg-primary shadow-[0_0_10px_var(--primary)]"
+                                    style={{ width: `${progress}%` }}
+                                />
+                            ) : (
+                                <div className={`h-full ${i < index ? 'bg-primary/40' : ''}`} />
+                            )}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Scroll Indicator */}
+                <div className="flex flex-col items-center gap-2 opacity-50 hover:opacity-100 transition-opacity">
+                    <div className="w-[24px] h-[40px] rounded-full border-2 border-foreground/20 flex justify-center p-1.5">
+                        <motion.div 
+                            animate={{ y: [0, 14, 0] }}
+                            transition={{ duration: 2, repeat: Infinity }}
+                            className="w-1.5 h-1.5 bg-primary rounded-full shadow-[0_0_8px_var(--primary)]"
+                        />
+                    </div>
+                </div>
             </div>
         </section>
     );

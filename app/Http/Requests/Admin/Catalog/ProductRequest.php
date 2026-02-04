@@ -34,7 +34,8 @@ class ProductRequest extends FormRequest
                 'string', 
                 Rule::unique('products', 'slug')->ignore($productId)
             ],
-
+            'existing_images' => ['nullable'], // Autorise le champ (même si c'est du JSON string)
+            'images'          => ['nullable', 'array'], // Autorise les nouveaux fichiers
             // --- RACINES DES TABLEAUX ---
             'name'        => ['required', 'array'],
             'description' => ['required', 'array'],

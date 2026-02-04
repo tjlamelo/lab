@@ -4,35 +4,31 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
     public function up(): void
     {
-          Schema::create('user_devices', function (Blueprint $table) {
+        Schema::create('user_devices', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
 
-            // L'empreinte unique du navigateur/appareil
+            // Empreinte et identification
             $table->string('fingerprint')->index();
+            $table->string('device_type')->nullable(); // mobile, desktop, tablet
+            $table->string('os_family')->nullable();   // iOS, Windows, Android
+            $table->string('browser_family')->nullable(); // Chrome, Safari
 
-            // Informations lisibles pour l'utilisateur (ex: "Chrome sur Windows 11")
-            $table->string('device_name')->nullable();
-            $table->string('browser')->nullable();
-            $table->string('platform')->nullable(); // Windows, iOS, Android
-
-            // Localisation approximative
-            $table->string('last_ip')->nullable();
-
-            // Statut de l'appareil
-            $table->boolean('is_trusted')->default(true);
-            $table->timestamp('last_active_at')->nullable();
+            // Sécurité et Abus
+            $table->ipAddress('last_ip')->nullable();
+            $table->boolean('is_trusted')->default(false); // Passe à true après double authentification
+            $table->integer('login_count')->default(1);
+            $table->timestamp('last_active_at')->useCurrent();
 
             $table->timestamps();
 
-            // Un utilisateur ne doit pas avoir deux fois le même fingerprint enregistré
+            // Index composite pour des recherches ultra-rapides
             $table->unique(['user_id', 'fingerprint']);
         });
     }

@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { Beaker, BookOpen, Folder, LayoutGrid } from 'lucide-react';
+import { Beaker, BookOpen, Folder, LayoutGrid,FolderTree } from 'lucide-react';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -16,7 +16,9 @@ import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
 import AppLogo from './app-logo';
 import productsRoute from '@/routes/products';
+import categoriesRoute from '@/routes/categories'; // Import de tes routes catégories
 import LanguageSwitcher from './language-switcher';
+
 const mainNavItems: NavItem[] = [
     {
         title: 'Dashboard',
@@ -28,6 +30,11 @@ const mainNavItems: NavItem[] = [
         title: 'Catalogue',
         href: productsRoute.index().url,
         icon: Beaker, // Ou Folder, selon ta préférence
+    },
+    {
+        title: 'Catégories', // Nouvelle entrée
+        href: categoriesRoute.index().url,
+        icon: FolderTree,
     },
 ];
 

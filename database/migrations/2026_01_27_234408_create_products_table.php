@@ -21,7 +21,7 @@ return new class extends Migration {
             $table->string('slug')->unique();
             $table->string('sku')->unique()->nullable();
             $table->decimal('price', 10, 2);
-       $table->string('unit')->nullable();
+            $table->string('unit')->nullable();
             $table->string('purity')->default('99.9%');
             $table->integer('stock')->default(0);
             $table->json('images')->nullable();

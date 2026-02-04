@@ -8,9 +8,9 @@ export function MobileNav({ auth }: { auth: any }) {
     // Utilisation d'un tableau d'objets pour la gestion propre des items
     const navItems = [
         { label: 'Home', href: '/', icon: Home },
-        { label: 'Explore', href: '/categories', icon: Grid },
+        { label: 'Explore', href: '/explore', icon: Grid },
         { label: 'Cart', href: '/cart', icon: ShoppingCart },
-        { label: 'Offers', href: '/offers', icon: Tag },
+        // { label: 'Offers', href: '/offers', icon: Tag },
         { 
             label: auth.user ? 'Profile' : 'Sign in', 
             href: auth.user ? '/dashboard' : '/login', 

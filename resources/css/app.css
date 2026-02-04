@@ -147,4 +147,14 @@
         @apply bg-background text-foreground font-sans antialiased;
     }
 }
+/* Masquer la barre de défilement pour Chrome, Safari et Opera */
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+
+/* Masquer la barre de défilement pour IE, Edge et Firefox */
+.scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
 

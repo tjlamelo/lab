@@ -40,6 +40,7 @@ public function getRouteKeyName(): string
 {
     return 'slug';
 }
+
     /**
      * Relation avec la catégorie
      */

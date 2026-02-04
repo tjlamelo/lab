@@ -9,30 +9,42 @@ class ProductResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        // On récupère la locale actuelle (ex: 'en', 'fr')
-        $locale = app()->getLocale();
-
         return [
             'id'          => $this->id,
             'slug'        => $this->slug,
-            // Utilisation du helper getTranslation() au lieu du cast (string)
+            'sku'         => $this->sku,
+            
+            // 1. Traduction simple pour l'affichage rapide (UI)
             'name'        => $this->getTranslation('name'), 
             'description' => $this->getTranslation('description'),
-            'price'       => $this->price,
-            'stock'       => $this->stock,
             
-      
-          'unit'        => $this->unit, 'purity'      => $this->purity,
-            'brand'       => $this->brand,
+            // 2. Traductions COMPLÈTES pour les onglets (React Tabs)
+            'name_translations'        => $this->name,        // Envoie tout le JSON
+            'description_translations' => $this->description, // Envoie tout le JSON
+            
+            'price'       => (float) $this->price,
+            'stock'       => $this->stock,
+            'unit'        => $this->unit, 
+            'purity'      => $this->purity,
+            
+            // 3. Les images pour la galerie
+            'images'      => $this->images ?? [],
+            
+            // 4. Les métadonnées (SEO inclu dedans)
+            'meta'        => $this->meta ?? [],
+            
             'is_active'   => (bool) $this->is_active,
             'is_featured' => (bool) $this->is_featured,
-            'updated_at'  => $this->updated_at->format('Y-m-d'),
-          'category'    => $this->whenLoaded('category', function() {
-            return [
-                'id' => $this->category->id,
-                'name' => $this->category->getTranslation('name', app()->getLocale())
-            ];
-        }),
+            
+            'created_at'  => $this->created_at?->format('Y-m-d H:i'),
+            'updated_at'  => $this->updated_at?->format('Y-m-d H:i'),
+
+            'category'    => $this->whenLoaded('category', function() {
+                return [
+                    'id'   => $this->category->id,
+                    'name' => $this->category->getTranslation('name')
+                ];
+            }),
         ];
     }
 }

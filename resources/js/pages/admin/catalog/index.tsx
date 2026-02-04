@@ -1,4 +1,4 @@
-import React, { useState } from 'react'; // Ajoute React ici
+import React, { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import { 
     ChevronDown, Edit2, Plus, Trash2, Eye, 
@@ -14,21 +14,23 @@ import productsRoute from '@/routes/products';
 
 export default function Index({ products }: any) {
     const { __ } = useTranslate();
-    const [expandedRow, setExpandedRow] = useState<number | null>(null);
+    const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
-    const toggleRow = (id: number) => {
-        setExpandedRow(expandedRow === id ? null : id);
+    const toggleRow = (slug: string) => {
+        setExpandedRow(expandedRow === slug ? null : slug);
     };
 
-    const handleToggleStatus = (e: React.MouseEvent, id: number, type: string) => {
+    const handleToggleStatus = (e: React.MouseEvent, slug: string, type: string) => {
         e.stopPropagation(); 
-        router.post(productsRoute.toggle(id).url, { type }, { preserveScroll: true });
+        // Utilisation systématique du SLUG
+        router.post(productsRoute.toggle(slug).url, { type }, { preserveScroll: true });
     };
 
-    const handleDelete = (e: React.MouseEvent, id: number) => {
+    const handleDelete = (e: React.MouseEvent, slug: string) => {
         e.stopPropagation();
         if (confirm(__('Voulez-vous supprimer ce produit ?'))) {
-            router.delete(productsRoute.destroy(id).url);
+            // Utilisation systématique du SLUG
+            router.delete(productsRoute.destroy(slug).url);
         }
     };
 
@@ -61,13 +63,13 @@ export default function Index({ products }: any) {
                         <TableBody>
                             {products.data.length > 0 ? (
                                 products.data.map((p: any) => (
-                                    <React.Fragment key={p.id}>
+                                    <React.Fragment key={p.slug}>
                                         <TableRow 
                                             className="cursor-pointer hover:bg-muted/30 transition-colors"
-                                            onClick={() => toggleRow(p.id)}
+                                            onClick={() => toggleRow(p.slug)}
                                         >
                                             <TableCell>
-                                                <ChevronDown className={`size-4 transition-transform ${expandedRow === p.id ? 'rotate-180 text-primary' : 'text-muted-foreground'}`} />
+                                                <ChevronDown className={`size-4 transition-transform ${expandedRow === p.slug ? 'rotate-180 text-primary' : 'text-muted-foreground'}`} />
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex flex-col">
@@ -83,7 +85,7 @@ export default function Index({ products }: any) {
                                             </TableCell>
                                             <TableCell>
                                                 <Badge 
-                                                    onClick={(e) => handleToggleStatus(e, p.id, 'active')}
+                                                    onClick={(e) => handleToggleStatus(e, p.slug, 'active')}
                                                     variant={p.is_active ? "default" : "secondary"}
                                                     className="cursor-pointer"
                                                 >
@@ -92,14 +94,30 @@ export default function Index({ products }: any) {
                                             </TableCell>
                                             <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                                                 <div className="flex justify-end gap-1">
-                                                    <Link href={productsRoute.show(p.id).url}><Button variant="ghost" size="icon" className="size-8"><Eye className="size-4" /></Button></Link>
-                                                    <Link href={productsRoute.edit(p.id).url}><Button variant="ghost" size="icon" className="size-8"><Edit2 className="size-4" /></Button></Link>
-                                                    <Button variant="ghost" size="icon" className="size-8 text-destructive" onClick={(e) => handleDelete(e, p.id)}><Trash2 className="size-4" /></Button>
+                                                    <Link href={productsRoute.show(p.slug).url}>
+                                                        <Button variant="ghost" size="icon" className="size-8">
+                                                            <Eye className="size-4" />
+                                                        </Button>
+                                                    </Link>
+                                                    {/* ICI : On passe p.slug au lieu de p.id */}
+                                                    <Link href={productsRoute.edit(p.slug).url}>
+                                                        <Button variant="ghost" size="icon" className="size-8">
+                                                            <Edit2 className="size-4" />
+                                                        </Button>
+                                                    </Link>
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        className="size-8 text-destructive" 
+                                                        onClick={(e) => handleDelete(e, p.slug)}
+                                                    >
+                                                        <Trash2 className="size-4" />
+                                                    </Button>
                                                 </div>
                                             </TableCell>
                                         </TableRow>
 
-                                        {expandedRow === p.id && (
+                                        {expandedRow === p.slug && (
                                             <TableRow className="bg-muted/10 animate-in fade-in slide-in-from-top-2">
                                                 <TableCell colSpan={6} className="p-6">
                                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -108,15 +126,15 @@ export default function Index({ products }: any) {
                                                             <p className="text-sm text-muted-foreground italic leading-relaxed">{p.description || __('Aucune description.')}</p>
                                                         </div>
                                                         <div className="space-y-2">
-                                                            {/* <h4 className="text-[10px] font-bold text-primary uppercase tracking-widest">{__('Détails')}</h4> */}
                                                             <div className="flex flex-wrap gap-2">
-                                                                {/* <Badge variant="secondary">Pureté: {p.purity || 'N/A'}</Badge>
-                                                                <Badge variant="secondary">Marque: {p.brand || 'PrimeLab'}</Badge> */}
+                                                                <Badge variant="secondary">Pureté: {p.purity || '99%'}</Badge>
                                                             </div>
                                                         </div>
                                                         <div className="flex items-center justify-end">
-                                                            <Link href={productsRoute.show(p.id).url}>
-                                                                <Button size="sm" variant="outline" className="gap-2"><Info className="size-4" /> {__('Voir Fiche Complète')}</Button>
+                                                            <Link href={productsRoute.show(p.slug).url}>
+                                                                <Button size="sm" variant="outline" className="gap-2">
+                                                                    <Info className="size-4" /> {__('Voir Fiche Complète')}
+                                                                </Button>
                                                             </Link>
                                                         </div>
                                                     </div>

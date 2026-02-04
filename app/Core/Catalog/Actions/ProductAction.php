@@ -9,97 +9,136 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 use Illuminate\Support\Facades\Log;
-
+ 
+use Illuminate\Support\Facades\Storage;
+ 
+use Illuminate\Http\UploadedFile;
 final class ProductAction
 {
     public function __construct(
         private ProductSeoGenerator $seoGenerator
     ) {}
 
-public function create(ProductDto $dto): Product
-{
-    return DB::transaction(function () use ($dto) {
-        // 1. Gérer le slug unique
-        $slug = $this->generateUniqueSlug($dto->slug ?: $dto->name['en'] ?? reset($dto->name));
+private function handleGallery(array $newFiles, array $existingPaths, ?array $oldPathsInDb = null): array
+    {
+        Log::info('--- handleGallery: Début du traitement ---');
+        Log::info('Nouvelles images reçues (count): ' . count($newFiles));
+        Log::info('Images existantes à garder (count): ' . count($existingPaths));
+        
+        $gallery = $existingPaths;
 
-        // 2. Création initiale
-        $product = Product::create([
-            'category_id' => $dto->category_id,
-            'name'        => $dto->name,
-            'description' => $dto->description,
-            'unit'        => $dto->unit, // Ajouté ici
-            'slug'        => $slug,
-            'sku'         => $dto->sku ?? $this->generateSku($dto),
-            'price'       => $dto->price,
-            'purity'      => $dto->purity,
-            'stock'       => $dto->stock,
-            'images'      => $dto->images,
-            'is_active'   => $dto->is_active,
-            'is_featured' => $dto->is_featured,
-        ]);
-
-        // 3. Générer le SEO multilingue complet
-        $product->update([
-            'meta' => $this->seoGenerator->generate($product, $dto->meta)
-        ]);
-
-        return $product;
-    });
-}
-
-public function update(Product $product, ProductDto $dto): Product
-{
-    return DB::transaction(function () use ($product, $dto) {
-        // --- LOG META RECU ---
-        Log::info('DEBUT UPDATE META PRODUIT ID: ' . $product->id, [
-            'meta_dto_brut' => $dto->meta, // Ce qui vient du formulaire React
-            'meta_actuel_db' => $product->meta, // Ce qui est en base actuellement
-        ]);
-
-        $slug = $product->slug;
-        if ($dto->slug && $dto->slug !== $product->slug) {
-            $slug = $this->generateUniqueSlug($dto->slug, $product->id);
+        // 1. Nettoyage physique des images supprimées
+        if ($oldPathsInDb) {
+            $removedImages = array_diff($oldPathsInDb, $existingPaths);
+            Log::info('Images à supprimer du disque (count): ' . count($removedImages));
+            foreach ($removedImages as $path) {
+                if (Storage::disk('public')->exists($path)) {
+                    Storage::disk('public')->delete($path);
+                    Log::info("Fichier supprimé: {$path}");
+                }
+            }
         }
 
-        // 1. Update des champs classiques
-        $product->update([
-            'category_id' => $dto->category_id,
-            'name'        => $dto->name,
-            'description' => $dto->description,
-            'unit'        => $dto->unit,
-            'slug'        => $slug,
-            'sku'         => $dto->sku,
-            'price'       => $dto->price,
-            'stock'       => $dto->stock,
-            'purity'      => $dto->purity,
-            'images'      => $dto->images,
-            'is_active'   => $dto->is_active,
-            'is_featured' => $dto->is_featured,
+        // 2. Upload des nouvelles images
+        foreach ($newFiles as $index => $file) {
+            if ($file instanceof UploadedFile) {
+                $path = $file->store('products', 'public');
+                $gallery[] = $path;
+                Log::info("Nouvel upload [#{$index}]: {$file->getClientOriginalName()} -> stocké sous: {$path}");
+            } else {
+                Log::warning("Élément reçu dans newFiles [#{$index}] n'est pas une instance de UploadedFile.");
+            }
+        }
+
+        Log::info('Galerie finale résultante (total): ' . count($gallery));
+        return $gallery;
+    }
+public function create(ProductDto $dto): Product
+    {
+        Log::info('=== ACTION: CREATE PRODUCT ===');
+        Log::info('Nom du produit (EN): ' . ($dto->name['en'] ?? 'N/A'));
+
+        return DB::transaction(function () use ($dto) {
+            $gallery = $this->handleGallery($dto->image_files, []);
+            $slug = $this->generateUniqueSlug($dto->slug ?: $dto->name['en'] ?? reset($dto->name));
+
+            $product = Product::create([
+                'category_id' => $dto->category_id,
+                'name'        => $dto->name,
+                'description' => $dto->description,
+                'unit'        => $dto->unit,
+                'slug'        => $slug,
+                'sku'         => $dto->sku ?? $this->generateSku($dto),
+                'price'       => $dto->price,
+                'purity'      => $dto->purity,
+                'stock'       => $dto->stock,
+                'images'      => $gallery,
+                'is_active'   => $dto->is_active,
+                'is_featured' => $dto->is_featured,
+            ]);
+
+            $product->update([
+                'meta' => $this->seoGenerator->generate($product, $dto->meta)
+            ]);
+
+            Log::info('Produit créé avec succès. ID: ' . $product->id);
+            return $product;
+        });
+    }
+public function update(Product $product, ProductDto $dto): Product
+    {
+        Log::info('=== ACTION: UPDATE PRODUCT (ID: ' . $product->id . ') ===');
+        
+        // LOG AVANT MODIFICATION
+        Log::info('ÉTAT AVANT UPDATE:', [
+            'slug' => $product->slug,
+            'images_en_base' => $product->images,
+            'stock' => $product->stock
         ]);
 
-        // 2. Génération du SEO
-        $newSeoMeta = $this->seoGenerator->generate($product, $dto->meta);
+        return DB::transaction(function () use ($product, $dto) {
+            $updatedGallery = $this->handleGallery(
+                $dto->image_files, 
+                $dto->existing_images, 
+                $product->images
+            );
 
-        // --- LOG TRANSFORMATION SEO ---
-        Log::info('RESULTAT SEO GENERATOR ID: ' . $product->id, [
-            'meta_genere' => $newSeoMeta
-        ]);
+            $slug = $product->slug;
+            if ($dto->slug && $dto->slug !== $product->slug) {
+                $slug = $this->generateUniqueSlug($dto->slug, $product->id);
+            }
 
-        $product->update([
-            'meta' => $newSeoMeta
-        ]);
+            $product->update([
+                'category_id' => $dto->category_id,
+                'name'        => $dto->name,
+                'description' => $dto->description,
+                'unit'        => $dto->unit,
+                'slug'        => $slug,
+                'sku'         => $dto->sku,
+                'price'       => $dto->price,
+                'stock'       => $dto->stock,
+                'purity'      => $dto->purity,
+                'images'      => $updatedGallery,
+                'is_active'   => $dto->is_active,
+                'is_featured' => $dto->is_featured,
+            ]);
 
-        $finalProduct = $product->fresh();
+            $product->update([
+                'meta' => $this->seoGenerator->generate($product, $dto->meta)
+            ]);
 
-        // --- LOG FINAL ---
-        Log::info('FIN UPDATE META ID: ' . $product->id, [
-            'meta_final_db' => $finalProduct->meta
-        ]);
+            $product = $product->fresh();
 
-        return $finalProduct;
-    });
-}
+            // LOG APRÈS MODIFICATION
+            Log::info('ÉTAT APRÈS UPDATE:', [
+                'slug' => $product->slug,
+                'images_en_base' => $product->images,
+                'stock' => $product->stock
+            ]);
 
+            return $product;
+        });
+    }
     /**
      * Génère un slug unique en vérifiant la base de données
      */
@@ -157,9 +196,16 @@ public function update(Product $product, ProductDto $dto): Product
         return Product::onlyTrashed()->findOrFail($id)->restore();
     }
 
-    public function forceDelete(int $id): bool
-    {
-        // Suppression définitive de la base de données
-        return Product::onlyTrashed()->findOrFail($id)->forceDelete();
+public function forceDelete(int $id): bool
+{
+    $product = Product::onlyTrashed()->findOrFail($id);
+    
+    if (is_array($product->images)) {
+        foreach ($product->images as $path) {
+            Storage::disk('public')->delete($path);
+        }
     }
+
+    return $product->forceDelete();
+}
 }
