@@ -6,7 +6,7 @@ import { PageHeader } from '@/components/shop/page-header';
 
 export default function ShopLayout({ children }: PropsWithChildren) {
     const { auth } = usePage<any>().props;
-
+const { filters } = usePage().props as any;
     return (
         <div className="min-h-screen bg-[#FCFCFC] flex font-sans">
             {/* 1. Sidebar style Shop.app */}
@@ -24,8 +24,7 @@ export default function ShopLayout({ children }: PropsWithChildren) {
                     <div className="relative z-10 flex-1 flex flex-col bg-white rounded-[28px] overflow-hidden">
                         
                         {/* Header avec Recherche au milieu et Langue à droite */}
-                        <PageHeader />
-
+                      <PageHeader currentSearch={filters?.search} />
                         {/* Zone de contenu défilante */}
                         <main className="flex-1 overflow-y-auto">
                             {children}

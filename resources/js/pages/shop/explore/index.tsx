@@ -25,19 +25,22 @@ export default function ExplorePage({ categories, products, filters }: Props) {
         return '';
     };
 
-    const handleFilterChange = (key: string, value: any) => {
-        const newFilters = { ...filters, [key]: value };
-        if (!value) delete newFilters[key];
-        if (key !== 'page') delete newFilters.page;
+ const handleFilterChange = (key: string, value: any) => {
+    // On garde TOUS les filtres actuels (incluant 'search')
+    const newFilters = { ...filters, [key]: value };
+    
+    // Si la valeur est vide, on supprime la clé
+    if (!value) delete newFilters[key];
+    
+    // Si on change de filtre, on revient à la page 1
+    if (key !== 'page') delete newFilters.page;
 
-        // Utilisation de shop.index.url()
-        router.get(shop.index.url(), newFilters, {
-            preserveState: true,
-            replace: true,
-            preserveScroll: true,
-        });
-    };
-
+    router.get(shop.index.url(), newFilters, {
+        preserveState: true,
+        replace: true,
+        preserveScroll: true,
+    });
+};
     const pagination = products.meta || products;
 
     return (
@@ -54,9 +57,8 @@ export default function ExplorePage({ categories, products, filters }: Props) {
                             {__('High quality chemical solutions')}
                         </p>
                     </div>
-                    <div className="w-full md:w-96">
-                        <SearchBar />
-                    </div>
+               
+                 
                 </div>
 
                 <div className="mb-16">

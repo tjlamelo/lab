@@ -17,22 +17,23 @@ final class OrderDto
         public readonly ?string $paymentProof = null,
     ) {}
 
-    public static function fromRequest(int $userId, array $validatedData): self
-    {
-        // On transforme les items bruts en objets OrderItemDto
-        $items = array_map(
-            fn($item) => OrderItemDto::fromArray($item),
-            $validatedData['items']
-        );
+ public static function fromRequest(int $userId, array $validatedData): self
+{
+    // On utilise collect() pour s'assurer que même si c'est une Collection, 
+    // on peut itérer et transformer en array à la fin.
+    $items = collect($validatedData['items'])->map(
+        fn($item) => OrderItemDto::fromArray((array) $item)
+    )->all();
 
-        return new self(
-            userId: $userId,
-            paymentMethodId: $validatedData['payment_method_id'],
-            totalAmount: (float) $validatedData['total_amount'],
-            shippingAddress: $validatedData['shipping_address'],
-            items: $items,
-            notes: $validatedData['notes'] ?? null,
-            paymentProof: $validatedData['payment_proof'] ?? null
-        );
-    }
+    return new self(
+        userId: $userId,
+        paymentMethodId: $validatedData['payment_method_id'],
+        totalAmount: (float) $validatedData['total_amount'],
+        shippingAddress: $validatedData['shipping_address'],
+        items: $items,
+        notes: $validatedData['notes'] ?? null,
+        paymentProof: $validatedData['payment_proof'] ?? null
+        
+    );
+}
 }

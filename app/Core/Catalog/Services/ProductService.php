@@ -52,43 +52,47 @@ final class ProductService
         // Exécution de la pagination
         return $query->paginate($perPage);
     }
-    public function search(array $filters): LengthAwarePaginator
+public function search(array $filters): LengthAwarePaginator
     {
         $query = Product::query();
-
-        // Récupère la langue en cours (ex: 'fr', 'en', 'ar')
         $locale = app()->getLocale();
 
         if (!empty($filters['search'])) {
             $searchTerm = $filters['search'];
 
             $query->where(function (Builder $q) use ($searchTerm, $locale) {
-                // 1. Recherche prioritaire dans la langue actuelle
+                // 1. Recherche dans le nom (Langue active - Priorité Max)
                 $q->where("name->{$locale}", 'like', "%{$searchTerm}%")
-                    // 2. Recherche de secours dans les autres langues (optionnel mais conseillé)
-                    ->orWhere('name->fr', 'like', "%{$searchTerm}%")
-                    ->orWhere('name->en', 'like', "%{$searchTerm}%")
-                    // 3. Identifiants uniques (SKU, Slug)
+                    // 2. Recherche dans la description (Langue active)
+                    ->orWhere("description->{$locale}", 'like', "%{$searchTerm}%")
+                    // 3. Recherche globale (SKU, Slug)
                     ->orWhere('sku', 'like', "%{$searchTerm}%")
-                    ->orWhere('slug', 'like', "%{$searchTerm}%");
+                    ->orWhere('slug', 'like', "%{$searchTerm}%")
+                    // 4. Recherche dans la catégorie
+                    ->orWhereHas('category', function ($cat) use ($searchTerm, $locale) {
+                        $cat->where("name->{$locale}", 'like', "%{$searchTerm}%")
+                           ->orWhere('name', 'like', "%{$searchTerm}%");
+                    });
             });
+
+            // TRI INTELLIGENT : On fait remonter ce qui commence par le terme dans la langue du client
+            $query->orderByRaw("CASE 
+                WHEN name->'$.{$locale}' LIKE '{$searchTerm}%' THEN 1 
+                WHEN name->'$.{$locale}' LIKE '%{$searchTerm}%' THEN 2 
+                ELSE 3 
+            END");
         }
 
-        // Filtre par catégorie
+        // Autres filtres
         $query->when($filters['category_id'] ?? null, fn($q, $id) => $q->where('category_id', $id));
-
-        // Filtres Booléens (is_active, is_featured)
         $query->when(isset($filters['is_active']), fn($q) => $q->where('is_active', $filters['is_active']));
         $query->when(isset($filters['is_featured']), fn($q) => $q->where('is_featured', $filters['is_featured']));
 
-        // Gestion du tri (Optionnel mais très utile pour l'UX)
-        $sortField = $filters['sort_by'] ?? 'created_at';
-        $sortOrder = $filters['sort_order'] ?? 'desc';
-        $query->orderBy($sortField, $sortOrder);
-
-        // Gestion des Soft Deletes
-        if (($filters['trashed'] ?? null) === 'only') {
-            $query->onlyTrashed();
+        // Si pas de recherche, tri par date
+        if (empty($filters['search'])) {
+            $sortField = $filters['sort_by'] ?? 'created_at';
+            $sortOrder = $filters['sort_order'] ?? 'desc';
+            $query->orderBy($sortField, $sortOrder);
         }
 
         return $query->with('category')->paginate($filters['per_page'] ?? 15);
@@ -108,6 +112,8 @@ public function findBySlugOrId(string|int $identifier): Product
         })
         ->firstOrFail(); // Renvoie une 404 si le produit n'existe pas ou est inactif
 }
+
+
     // --- APPELS VERS L'ACTION ---
 
     public function toggleProductStatus(Product $product, string $type): bool
@@ -133,4 +139,6 @@ public function findBySlugOrId(string|int $identifier): Product
     {
         return $this->action->forceDelete($id);
     }
+
+
 }

@@ -12,12 +12,13 @@ class PaymentMethod extends Model
         'instructions',
         'slug',
         'logo',
+        'payment_details', // <-- Ajouté
         'is_active'
     ];
 
     protected $casts = [
-        'name' => 'array',
         'instructions' => 'array',
+        'payment_details' => 'array', // <-- Ajouté pour corriger l'erreur SQL
         'is_active' => 'boolean',
     ];
 

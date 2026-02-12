@@ -12,16 +12,18 @@ class OrderItem extends Model
         'product_id', 
         'quantity', 
         'price',
+        'unit_at_purchase', // Ajouté pour correspondre à la migration et au DTO
         'product_name_at_purchase'
     ];
 
     protected $casts = [
+        'quantity' => 'integer',
         'price' => 'decimal:2',
-        'product_name_at_purchase' => 'array',
+        'product_name_at_purchase' => 'json', // Utiliser 'json' est souvent plus précis que 'array' pour les DB modernes
     ];
 
     /**
-     * Relation vers la commande
+     * Relation vers la commande parente.
      */
     public function order(): BelongsTo
     {
@@ -29,7 +31,8 @@ class OrderItem extends Model
     }
 
     /**
-     * Relation vers le produit actuel
+     * Relation vers le produit original.
+     * Note: On peut avoir un produit NULL si celui-ci a été supprimé du catalogue (set null).
      */
     public function product(): BelongsTo
     {

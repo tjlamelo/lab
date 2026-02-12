@@ -35,7 +35,8 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        $locale = app()->getLocale();  
+        $locale = app()->getLocale();
+        $cartService = app(\App\Core\Ordering\Services\CartCacheService::class);
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -43,26 +44,31 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
             ],
             'flash' => [
-            'success' => $request->session()->get('success'),
-            'error' => $request->session()->get('error'),
+                'success' => $request->session()->get('success'),
+                'error' => $request->session()->get('error'),
+            ],
+            'cart' => [
+            // Only fetch if logged in to avoid Redis errors
+            'count' => $request->user() ? $cartService->getCart($request->user()->id)['count'] : 0,
         ],
             'locale' => app()->getLocale(),
             'translations' => $this->getTranslations($locale),
             'supported_locales' => \Mcamara\LaravelLocalization\Facades\LaravelLocalization::getSupportedLocales(),
             'sidebarOpen' => !$request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
+
     }
-        /**
-         * Charge le contenu du fichier JSON de langue
-         */
-        protected function getTranslations($locale)
-        {
-            $path = lang_path("$locale.json");
+    /**
+     * Charge le contenu du fichier JSON de langue
+     */
+    protected function getTranslations($locale)
+    {
+        $path = lang_path("$locale.json");
 
-            if (file_exists($path)) {
-                return json_decode(file_get_contents($path), true);
-            }
-
-            return [];
+        if (file_exists($path)) {
+            return json_decode(file_get_contents($path), true);
         }
+
+        return [];
+    }
 }

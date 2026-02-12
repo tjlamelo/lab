@@ -105,7 +105,7 @@ export function CardProduct({ product, ensureString, translate }: ProductProps) 
 
                 {/* Price Badge */}
                 <div className="absolute top-4 right-4 bg-black/80 backdrop-blur-md px-3 py-1 rounded-full shadow-sm z-10">
-                    <span className="text-[12px] font-black text-white">{product.price}€</span>
+                    <span className="text-[12px] font-black text-white">{product.price} $</span>
                 </div>
             </div>
 

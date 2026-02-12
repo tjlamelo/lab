@@ -12,22 +12,16 @@ return new class extends Migration {
     {
         Schema::create('payment_methods', function (Blueprint $table) {
             $table->id();
-
-            // Nom du moyen de paiement : {"fr": "Virement", "en": "Bank Transfer"}
-            $table->json('name');
-
-            // Instructions détaillées : {"fr": "Envoyez le montant sur le RIB...", "en": "Send the amount to..."}
+            $table->string('name'); // {"fr": "Crypto", "en": "Crypto"}
             $table->json('instructions')->nullable();
-
-            // Identifiant unique (ex: 'crypto-btc', 'orange-money', 'virement')
             $table->string('slug')->unique();
-
-            // Pour stocker une icône (ex: "crypto.svg")
             $table->string('logo')->nullable();
 
-            // Statut : permet de désactiver un moyen de paiement sans le supprimer
-            $table->boolean('is_active')->default(true);
+            // Nouveau champ pour les coordonnées de réception des fonds
+            // Exemple : {"address": "0x...", "network": "ERC20"} ou {"email": "pay@me.com"}
+            $table->json('payment_details')->nullable();
 
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
     }

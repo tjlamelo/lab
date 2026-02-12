@@ -26,6 +26,8 @@ return new class extends Migration {
             // TRÈS IMPORTANT : On stocke le prix auquel le client a payé.
             // Si le prix du produit change demain, la facture du client reste exacte.
             $table->decimal('price', 10, 2);
+            
+            $table->string('unit_at_purchase')->nullable();
 
             // Optionnel : stocker le nom du produit en JSON au cas où le produit original est supprimé
             $table->json('product_name_at_purchase')->nullable();
