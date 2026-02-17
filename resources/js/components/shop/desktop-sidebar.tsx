@@ -1,8 +1,9 @@
 import { Link, usePage } from '@inertiajs/react';
-import { Home, Grid, ShoppingCart, User, Package } from 'lucide-react';
+import { Home, Grid, ShoppingCart, User, Package, LogIn } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { login } from '@/routes';
 
 export function DesktopSidebar({ auth }: { auth: any }) {
     const { url, props } = usePage();
@@ -137,6 +138,27 @@ export function DesktopSidebar({ auth }: { auth: any }) {
                     </AnimatePresence>
                 </Link>
 
+                {/* Bouton de connexion pour les utilisateurs non connectés */}
+                {!auth?.user && (
+                    <Link
+                        href={login().url}
+                        className="relative group p-3 flex flex-col items-center transition-all duration-200"
+                    >
+                        <div className={cn(
+                            "flex items-center justify-center rounded-full transition-all duration-300 p-3",
+                            "bg-[#5433EB] text-white opacity-100 shadow-md hover:shadow-lg hover:scale-110"
+                        )}>
+                            <LogIn className="h-6 w-6" strokeWidth={2.5} />
+                        </div>
+                        
+                        {/* Tooltip */}
+                        <div className="pointer-events-none invisible absolute left-[calc(100%-10px)] flex items-center justify-center whitespace-nowrap rounded-full border-[0.5px] border-gray-200 bg-white px-3 py-1 opacity-0 shadow-sm transition-all duration-200 group-hover:visible group-hover:opacity-100 group-hover:left-[calc(100%+8px)] z-50">
+                            <span className="text-[12px] font-medium text-black">Sign in</span>
+                        </div>
+                    </Link>
+                )}
+
+                {/* Profil pour les utilisateurs avec accès staff */}
                 {canSeeStaffArea && (
                     <Link
                         href="/dashboard"

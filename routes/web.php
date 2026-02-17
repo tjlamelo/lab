@@ -84,19 +84,19 @@ Route::group([
         Route::get('/{identifier}', [ExploreController::class, 'show'])->name('product.show');
     });
 
+    // Groupe pour le Panier (accessible invité ou connecté)
+    Route::prefix('cart')->name('cart.')->group(function () {
+        Route::get('/', [CartController::class, 'index'])->name('index');
+        Route::post('/add', [CartController::class, 'store'])->name('store');
+        Route::patch('/update/{productId}', [CartController::class, 'update'])->name('update');
+        Route::delete('/remove/{productId}', [CartController::class, 'destroy'])->name('destroy');
+        Route::delete('/clear', [CartController::class, 'clear'])->name('clear');
+    });
+
     // === Routes Nécessitant une Authentification et une Vérification Email ===
     Route::middleware(['auth', 'verified'])->group(function () {
 
-        // Groupe pour le Panier
-        Route::prefix('cart')->name('cart.')->group(function () {
-            Route::get('/', [CartController::class, 'index'])->name('index');
-            Route::post('/add', [CartController::class, 'store'])->name('store');
-            Route::patch('/update/{productId}', [CartController::class, 'update'])->name('update');
-            Route::delete('/remove/{productId}', [CartController::class, 'destroy'])->name('destroy');
-            Route::delete('/clear', [CartController::class, 'clear'])->name('clear');
-        });
-
-        // Groupe pour les Commandes Client
+        // Groupe pour les Commandes Client (checkout et création de commande)
         Route::prefix('orders')->name('orders.')->group(function () {
             Route::get('/checkout', [OrderController::class, 'checkout'])->name('checkout');
             Route::post('/', [OrderController::class, 'store'])->name('store');
@@ -198,11 +198,11 @@ Route::group([
 
 // === Route d'Accueil / Authentification ===
 // Route pour la page de bienvenue, souvent utilisée comme page d'accueil avant login.
-Route::get('/auth', function () {
-    return Inertia::render('welcome', [
-        'canRegister' => Features::enabled(Features::registration()),
-    ]);
-})->name('home');
+// Route::get('/auth', function () {
+//     return Inertia::render('shop/home', [
+//         'canRegister' => Features::enabled(Features::registration()),
+//     ]);
+// })->name('home');
 
 
 // === Fichiers de configuration externes ===

@@ -26,6 +26,29 @@ export function MobileNav({ auth }: { auth: any }) {
     };
     const locale = getLocale();
 
+    // Vérifier si l'utilisateur peut accéder à la zone staff
+    const canSeeStaffArea = (() => {
+        const user = auth?.user;
+        if (!user) return false;
+
+        const allowed = new Set(['admin', 'manager', 'editor']);
+        const rawRoles = user.roles ?? user.role ?? [];
+
+        if (typeof rawRoles === 'string') {
+            return allowed.has(rawRoles);
+        }
+
+        if (Array.isArray(rawRoles)) {
+            return rawRoles.some((r: any) => {
+                if (typeof r === 'string') return allowed.has(r);
+                if (r && typeof r === 'object') return allowed.has(String(r.name || r.slug || r.id || ''));
+                return false;
+            });
+        }
+
+        return false;
+    })();
+
     const navItems = [
         { label: 'Home', href: '/', icon: Home },
         { label: 'Explore', href: '/explore', icon: Grid },
@@ -41,12 +64,21 @@ export function MobileNav({ auth }: { auth: any }) {
         });
     }
 
-    // Ajouter le profil/connexion à la fin
-    navItems.push({ 
-        label: auth.user ? 'Profile' : 'Sign in', 
-        href: auth.user ? '/dashboard' : '/login', 
-        icon: User 
-    });
+    // Ajouter le profil/connexion à la fin uniquement si l'utilisateur peut voir la zone staff
+    if (canSeeStaffArea) {
+        navItems.push({ 
+            label: 'Profile', 
+            href: '/dashboard', 
+            icon: User 
+        });
+    } else if (!auth.user) {
+        // Afficher "Sign in" uniquement si l'utilisateur n'est pas connecté
+        navItems.push({ 
+            label: 'Sign in', 
+            href: '/login', 
+            icon: User 
+        });
+    }
 
     return (
         <nav className={cn(

@@ -17,9 +17,15 @@ class CartController extends Controller
         private readonly CartCacheService $cartService
     ) {}
 
-    public function index(): Response
+    private function cartOwnerId(Request $request): int|string
     {
-        $cartData = $this->cartService->getCart(auth()->id());
+        // Utilise l'ID utilisateur si connecté, sinon l'ID de session pour les invités
+        return $request->user()?->id ?? $request->session()->getId();
+    }
+
+    public function index(Request $request): Response
+    {
+        $cartData = $this->cartService->getCart($this->cartOwnerId($request));
 
         // LOG : Voir ce que le serveur renvoie au composant Index.tsx
         Log::info('🛒 Chargement du Panier Inertia', ['data' => $cartData]);
@@ -48,7 +54,7 @@ class CartController extends Controller
         // LOG : Vérifier que le DTO a bien mappé les champs
         Log::debug('📦 DTO créé pour le panier', $dto->jsonSerialize());
 
-        $this->cartService->addItem(auth()->id(), $dto);
+        $this->cartService->addItem($this->cartOwnerId($request), $dto);
 
         return back()->with('success', __('Item added to cart.'));
     }
@@ -63,23 +69,23 @@ class CartController extends Controller
         ]);
 
         $this->cartService->setItemQuantity(
-            auth()->id(), 
-            $productId, 
+            $this->cartOwnerId($request),
+            $productId,
             (float) $request->get('quantity')
         );
 
         return back()->with('success', __('Cart updated.'));
     }
 
-    public function destroy(int $productId): RedirectResponse
+    public function destroy(Request $request, int $productId): RedirectResponse
     {
-        $this->cartService->removeItem(auth()->id(), $productId);
+        $this->cartService->removeItem($this->cartOwnerId($request), $productId);
         return back()->with('success', __('Item removed.'));
     }
 
-    public function clear(): RedirectResponse
+    public function clear(Request $request): RedirectResponse
     {
-        $this->cartService->emptyCart(auth()->id());
+        $this->cartService->emptyCart($this->cartOwnerId($request));
         return back()->with('success', __('Cart cleared.'));
     }
 }

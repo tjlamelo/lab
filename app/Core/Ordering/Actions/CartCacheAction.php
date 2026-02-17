@@ -15,9 +15,9 @@ final class CartCacheAction
      * Récupère le panier depuis le cache (Redis, File, etc.)
      * @return Collection<int, OrderItemDto>
      */
-    public static function get(int $userId): Collection
+    public static function get(int|string $ownerId): Collection
     {
-        $data = Cache::get(self::KEY_PREFIX . $userId);
+        $data = Cache::get(self::KEY_PREFIX . $ownerId);
 
         if (!$data) {
             return collect();
@@ -36,9 +36,9 @@ final class CartCacheAction
     /**
      * Ajoute ou met à jour un produit de manière atomique avec un verrou (Lock).
      */
-    public static function updateOrAdd(int $userId, OrderItemDto $newItem): void
+    public static function updateOrAdd(int|string $ownerId, OrderItemDto $newItem): void
     {
-        $key = self::KEY_PREFIX . $userId;
+        $key = self::KEY_PREFIX . $ownerId;
         
         /**
          * Utilisation de Cache::lock pour gérer l'atomicité.
@@ -46,8 +46,8 @@ final class CartCacheAction
          */
         $lock = Cache::lock('lock_' . $key, 10);
 
-        $lock->get(function () use ($userId, $newItem) {
-            $cart = self::get($userId);
+        $lock->get(function () use ($ownerId, $newItem) {
+            $cart = self::get($ownerId);
 
             $existingIndex = $cart->search(fn($item) => $item->productId === $newItem->productId);
 
@@ -67,37 +67,37 @@ final class CartCacheAction
                 $cart->push($newItem);
             }
 
-            self::save($userId, $cart);
+            self::save($ownerId, $cart);
         });
     }
 
     /**
      * Supprime un produit spécifique du panier.
      */
-    public static function remove(int $userId, int $productId): void
+    public static function remove(int|string $ownerId, int $productId): void
     {
-        $cart = self::get($userId);
+        $cart = self::get($ownerId);
         
         // On filtre et on réindexe pour éviter des clés JSON comme {"1":...} au lieu de [...]
         $filtered = $cart->filter(fn($item) => $item->productId !== $productId)->values();
 
-        self::save($userId, $filtered);
+        self::save($ownerId, $filtered);
     }
 
     /**
      * Vide complètement le panier.
      */
-    public static function clear(int $userId): void
+    public static function clear(int|string $ownerId): void
     {
-        Cache::forget(self::KEY_PREFIX . $userId);
+        Cache::forget(self::KEY_PREFIX . $ownerId);
     }
 
     /**
      * Sauvegarde la collection dans le cache.
      */
-    private static function save(int $userId, Collection $cart): void
+    private static function save(int|string $ownerId, Collection $cart): void
     {
-        $key = self::KEY_PREFIX . $userId;
+        $key = self::KEY_PREFIX . $ownerId;
 
         /**
          * ->values() est crucial ici : il réindexe le tableau de 0 à N.

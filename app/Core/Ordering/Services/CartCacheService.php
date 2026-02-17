@@ -11,9 +11,9 @@ final class CartCacheService
     /**
      * Retrieve the user's cart with calculated metadata.
      */
-    public function getCart(int $userId): array
+    public function getCart(int|string $ownerId): array
     {
-        $items = CartCacheAction::get($userId);
+        $items = CartCacheAction::get($ownerId);
 
         return [
             'items' => $items,
@@ -25,44 +25,44 @@ final class CartCacheService
     /**
      * Add an item to the cart or increment quantity.
      */
-    public function addItem(int $userId, OrderItemDto $item): void
+    public function addItem(int|string $ownerId, OrderItemDto $item): void
     {
         // Business Rule: Check for maximum quantity per item if needed
         // if ($item->quantity > 100) throw new Exception("Quantity limit exceeded");
 
-        CartCacheAction::updateOrAdd($userId, $item);
+        CartCacheAction::updateOrAdd($ownerId, $item);
     }
 
     /**
      * Remove a specific product from the cart.
      */
-    public function removeItem(int $userId, int $productId): void
+    public function removeItem(int|string $ownerId, int $productId): void
     {
-        CartCacheAction::remove($userId, $productId);
+        CartCacheAction::remove($ownerId, $productId);
     }
 
     /**
      * Completely empty the cart.
      */
-    public function emptyCart(int $userId): void
+    public function emptyCart(int|string $ownerId): void
     {
-        CartCacheAction::clear($userId);
+        CartCacheAction::clear($ownerId);
     }
 
     /**
      * Update the quantity of an item directly (overwrite).
      */
-    public function setItemQuantity(int $userId, int $productId, int $quantity): void
+    public function setItemQuantity(int|string $ownerId, int $productId, int $quantity): void
     {
-        $cart = CartCacheAction::get($userId);
+        $cart = CartCacheAction::get($ownerId);
         $item = $cart->firstWhere('productId', $productId);
 
 // Dans CartCacheService.php -> setItemQuantity
 if ($item) {
-    $this->removeItem($userId, $productId);
+    $this->removeItem($ownerId, $productId);
     
     if ($quantity > 0) {
-        $this->addItem($userId, new OrderItemDto(
+        $this->addItem($ownerId, new OrderItemDto(
             productId: $item->productId,
             quantity: $quantity,
             price: $item->price,

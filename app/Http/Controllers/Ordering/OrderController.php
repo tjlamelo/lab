@@ -19,14 +19,20 @@ class OrderController extends Controller
 
     /**
      * Affiche la vue de checkout avec les produits et le total.
+     * Nécessite une authentification.
      */
     public function checkout()
     {
+        // Vérifier que l'utilisateur est authentifié (déjà géré par le middleware auth, mais double vérification)
+        if (!auth()->check()) {
+            return redirect()->route('login')->with('error', __('You must be logged in to proceed to checkout.'));
+        }
+
         $cartData = $this->cartService->getCart(auth()->id());
 
         // Si le panier est vide, on redirige vers le panier ou l'accueil
         if ($cartData['count'] === 0) {
-            return redirect()->route('cart.index')->with('error', 'Votre panier est vide.');
+            return redirect()->route('cart.index')->with('error', __('Your cart is empty.'));
         }
 
         return Inertia::render('shop/checkout/index', [

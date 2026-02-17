@@ -49,9 +49,11 @@ class HandleInertiaRequests extends Middleware
                 'error' => $request->session()->get('error'),
             ],
             'cart' => [
-            // Only fetch if logged in to avoid Redis errors
-            'count' => $request->user() ? $cartService->getCart($request->user()->id)['count'] : 0,
-        ],
+                // Compte le panier pour l'utilisateur connecté ou l'invité (session)
+                'count' => $cartService->getCart(
+                    $request->user()?->id ?? $request->session()->getId()
+                )['count'],
+            ],
             'locale' => app()->getLocale(),
             'translations' => $this->getTranslations($locale),
             'supported_locales' => \Mcamara\LaravelLocalization\Facades\LaravelLocalization::getSupportedLocales(),
