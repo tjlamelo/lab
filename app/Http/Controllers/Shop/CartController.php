@@ -19,8 +19,30 @@ class CartController extends Controller
 
     private function cartOwnerId(Request $request): int|string
     {
-        // Utilise l'ID utilisateur si connecté, sinon l'ID de session pour les invités
-        return $request->user()?->id ?? $request->session()->getId();
+        // Si l'utilisateur est connecté, on essaie d'abord de fusionner un éventuel panier invité.
+        if ($user = $request->user()) {
+            // On récupère un éventuel identifiant de panier invité stocké en session
+            $guestOwnerId = $request->session()->get('guest_cart_owner');
+
+            if ($guestOwnerId && $guestOwnerId !== $user->id) {
+                // Fusion du panier invité vers le panier utilisateur
+                $this->cartService->mergeCarts($guestOwnerId, $user->id);
+                // On nettoie ensuite la référence en session
+                $request->session()->forget('guest_cart_owner');
+            }
+
+            return $user->id;
+        }
+
+        // Utilisateur invité : on stocke un identifiant de panier stable en session
+        $guestOwnerId = $request->session()->get('guest_cart_owner');
+
+        if (!$guestOwnerId) {
+            $guestOwnerId = $request->session()->getId();
+            $request->session()->put('guest_cart_owner', $guestOwnerId);
+        }
+
+        return $guestOwnerId;
     }
 
     public function index(Request $request): Response

@@ -50,6 +50,33 @@ final class CartCacheService
     }
 
     /**
+     * Merge a guest cart into an authenticated user's cart.
+     *
+     * Used, for example, after login so the user does not lose
+     * the items they added before being redirected to authenticate.
+     */
+    public function mergeCarts(int|string $fromOwnerId, int|string $toOwnerId): void
+    {
+        if ($fromOwnerId === $toOwnerId) {
+            return;
+        }
+
+        $fromItems = CartCacheAction::get($fromOwnerId);
+
+        if ($fromItems->isEmpty()) {
+            return;
+        }
+
+        foreach ($fromItems as $item) {
+            // Réutilise la règle métier d'addition/mise à jour
+            CartCacheAction::updateOrAdd($toOwnerId, $item);
+        }
+
+        // On vide ensuite l'ancien panier invité
+        CartCacheAction::clear($fromOwnerId);
+    }
+
+    /**
      * Update the quantity of an item directly (overwrite).
      */
     public function setItemQuantity(int|string $ownerId, int $productId, int $quantity): void

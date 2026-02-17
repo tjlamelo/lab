@@ -32,7 +32,8 @@ class OrderController extends Controller
 
         // Si le panier est vide, on redirige vers le panier ou l'accueil
         if ($cartData['count'] === 0) {
-            return redirect()->route('cart.index')->with('error', __('Your cart is empty.'));
+            // Redirection simple sans message d'erreur (évite un message inutile pour l'utilisateur)
+            return redirect()->route('cart.index');
         }
 
         return Inertia::render('shop/checkout/index', [

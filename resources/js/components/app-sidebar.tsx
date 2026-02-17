@@ -23,26 +23,16 @@ import {
     SidebarMenuButton,
 } from '@/components/ui/sidebar';
 
-import { useTranslate } from '@/lib/i18n'; // Assure-toi d'importer ton hook de traduction
-import { dashboard } from '@/routes';
+import { useTranslate } from '@/lib/i18n';
 import type { NavItem } from '@/types';
 import AppLogo from './app-logo';
 import LanguageSwitcher from './language-switcher';
 
-// Import des routes
-import productsRoute from '@/routes/products';
-import categoriesRoute from '@/routes/categories';
-import adminUsersRoute from '@/routes/admin/users';
-import adminOrders from '@/routes/admin/orders';
-import socials from '@/routes/admin/socials';
-import paymentMethodsRoute from '@/routes/admin/payment-methods';
-
 export function AppSidebar() {
     const { __ } = useTranslate();
     const { props } = usePage();
-    const locale = (props as { locale?: string })?.locale ?? 'en';
 
-    // Helper pour obtenir le locale depuis l'URL ou les props
+    // Déterminer le locale courant (props > URL)
     const getLocale = (): string => {
         const propsLocale = (props as any)?.locale;
         if (typeof propsLocale === 'string') {
@@ -57,62 +47,67 @@ export function AppSidebar() {
         }
         return 'en';
     };
+
     const currentLocale = getLocale();
+
+    // Bases de chemins pour éviter la duplication
+    const base = `/${currentLocale}`;
+    const adminBase = `${base}/admin`;
 
     const mainNavItems: NavItem[] = [
         {
             title: __('Dashboard'),
-            href: dashboard().url,
+            href: `${base}/dashboard`,
             icon: LayoutGrid,
         },
-        /* --- CATALOG SECTION --- */
+        // --- Catalog ---
         {
             title: __('Products'),
-            href: productsRoute.index().url,
+            href: `${base}/catalog/products`,
             icon: ShoppingBasket,
         },
         {
             title: __('Categories'),
-            href: categoriesRoute.index().url,
+            href: `${base}/catalog/categories`,
             icon: Layers,
         },
-        /* --- SALES SECTION --- */
+        // --- Sales ---
         {
             title: __('Orders'),
-            href: adminOrders.index().url,
+            href: `${adminBase}/orders`,
             icon: PackageCheck,
         },
         {
             title: __('Shipment Steps'),
-            href: socials.index().url, // Update with correct route when ready
+            href: `${adminBase}/orders`, // liste des commandes, les étapes se gèrent depuis le détail
             icon: MapPinned,
         },
-        /* --- USERS SECTION --- */
+        // --- Users ---
         {
             title: __('Customers'),
-            href: adminUsersRoute.index().url,
+            href: `${adminBase}/users`,
             icon: Users,
         },
-        /* --- COMMUNICATION SECTION --- */
+        // --- Communication ---
         {
             title: __('Mail Management'),
-            href: `/${currentLocale}/admin/mail`,
+            href: `${adminBase}/mail`,
             icon: Mail,
         },
-        /* --- SETTINGS SECTION --- */
+        // --- Settings / Security ---
         {
             title: __('Blacklist'),
-            href: `/${currentLocale}/admin/security/blacklist`,
+            href: `${adminBase}/security/blacklist`,
             icon: ShieldAlert,
         },
         {
             title: __('Payment Methods'),
-            href: paymentMethodsRoute.index().url,
+            href: `${adminBase}/payment-methods`,
             icon: CreditCard,
         },
         {
             title: __('Social Networks'),
-            href: socials.index().url,
+            href: `${adminBase}/social-networks`,
             icon: Share2,
         },
     ];
@@ -123,7 +118,7 @@ export function AppSidebar() {
                 <SidebarMenu>
                     <SidebarMenuItem className="flex items-center justify-between gap-2 pr-2">
                         <SidebarMenuButton size="lg" asChild>
-                            <Link href={dashboard().url} prefetch>
+                            <Link href={`${base}/dashboard`} prefetch>
                                 <AppLogo />
                             </Link>
                         </SidebarMenuButton>
@@ -133,9 +128,9 @@ export function AppSidebar() {
                 </SidebarMenu>
             </SidebarHeader>
 
-            {/* <SidebarContent>
+            <SidebarContent>
                 <NavMain items={mainNavItems}/>
-            </SidebarContent> */}
+            </SidebarContent>
 
             <SidebarFooter>
                 <NavUser />
