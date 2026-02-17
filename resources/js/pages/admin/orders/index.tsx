@@ -297,10 +297,9 @@ export default function Index({ orders, filters, config }: Props) {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-sm font-bold text-gray-900">
-                                                {Number(
+                                                ${Number(
                                                     order.total_amount,
-                                                ).toLocaleString()}{' '}
-                                                XAF
+                                                ).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">

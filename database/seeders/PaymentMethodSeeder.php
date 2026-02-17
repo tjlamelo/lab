@@ -58,36 +58,36 @@ class PaymentMethodSeeder extends Seeder
                     'network' => 'TRON (TRC20)'
                 ]
             ],
-            [
-                'slug' => 'visa',
-                'logo' => 'https://cdn.simpleicons.org/visa',
-                'name' => 'Visa',
-                'instructions' => [
-                    'en' => 'Enter your Visa card details to proceed with payment.',
-                    'fr' => 'Entrez les détails de votre carte Visa pour procéder au paiement.',
-                    'ar' => 'أدخل تفاصيل بطاقة الفيزا الخاصة بك لإتمام الدفع.',
-                    'ru' => 'Введите данные вашей карты Visa для совершения оплаты.',
-                    'zh' => '请输入您的 Visa 卡详情以继续付款。'
-                ],
-                'payment_details' => [
-                    'processor' => 'Stripe/Direct'
-                ]
-            ],
-            [
-                'slug' => 'mastercard',
-                'logo' => 'https://cdn.simpleicons.org/mastercard',
-                'name' => 'Mastercard',
-                'instructions' => [
-                    'en' => 'Enter your Mastercard details to proceed with payment.',
-                    'fr' => 'Entrez les détails de votre carte Mastercard pour procéder au paiement.',
-                    'ar' => 'أدخل تفاصيل بطاقة ماستركارد الخاصة بك لإتمام الدفع.',
-                    'ru' => 'Введите данные вашей карты Mastercard для совершения оплаты.',
-                    'zh' => '请输入您的 Mastercard 卡详情以继续付款。'
-                ],
-                'payment_details' => [
-                    'processor' => 'Stripe/Direct'
-                ]
-            ],
+            // [
+            //     'slug' => 'visa',
+            //     'logo' => 'https://cdn.simpleicons.org/visa',
+            //     'name' => 'Visa',
+            //     'instructions' => [
+            //         'en' => 'Enter your Visa card details to proceed with payment.',
+            //         'fr' => 'Entrez les détails de votre carte Visa pour procéder au paiement.',
+            //         'ar' => 'أدخل تفاصيل بطاقة الفيزا الخاصة بك لإتمام الدفع.',
+            //         'ru' => 'Введите данные вашей карты Visa для совершения оплаты.',
+            //         'zh' => '请输入您的 Visa 卡详情以继续付款。'
+            //     ],
+            //     'payment_details' => [
+            //         'processor' => 'Stripe/Direct'
+            //     ]
+            // ],
+            // [
+            //     'slug' => 'mastercard',
+            //     'logo' => 'https://cdn.simpleicons.org/mastercard',
+            //     'name' => 'Mastercard',
+            //     'instructions' => [
+            //         'en' => 'Enter your Mastercard details to proceed with payment.',
+            //         'fr' => 'Entrez les détails de votre carte Mastercard pour procéder au paiement.',
+            //         'ar' => 'أدخل تفاصيل بطاقة ماستركارد الخاصة بك لإتمام الدفع.',
+            //         'ru' => 'Введите данные вашей карты Mastercard для совершения оплаты.',
+            //         'zh' => '请输入您的 Mastercard 卡详情以继续付款。'
+            //     ],
+            //     'payment_details' => [
+            //         'processor' => 'Stripe/Direct'
+            //     ]
+            // ],
         ];
 
         foreach ($methods as $method) {

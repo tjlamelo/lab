@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { 
     ChevronDown, Edit2, UserPlus, Trash2, 
-    UserCog, Mail, Phone, SearchX, Search, X 
+    UserCog, Mail, Phone, SearchX, Search, X, MonitorSmartphone
 } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,20 @@ interface Props {
 
 export default function Index({ users, filters }: Props) {
     const { __ } = useTranslate();
+    const { props } = usePage();
     const [expandedRow, setExpandedRow] = useState<number | null>(null);
+
+    const getLocale = (): string => {
+        const propsLocale = (props as any)?.locale;
+        if (typeof propsLocale === 'string') return propsLocale;
+        if (typeof window !== 'undefined') {
+            const pathParts = window.location.pathname.split('/').filter(Boolean);
+            const supportedLocales = ['en', 'fr', 'ar', 'ru', 'zh'];
+            if (pathParts.length > 0 && supportedLocales.includes(pathParts[0])) return pathParts[0];
+        }
+        return 'en';
+    };
+    const currentLocale = getLocale();
     
     // Local state for the search input
     const [searchValue, setSearchValue] = useState(filters.search || '');
@@ -147,6 +160,11 @@ export default function Index({ users, filters }: Props) {
                                             </TableCell>
                                             <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                                                 <div className="flex justify-end gap-1">
+                                                    <Link href={`/${currentLocale}/admin/users/${user.id}/devices`}>
+                                                        <Button variant="ghost" size="icon" className="size-8 hover:text-primary hover:bg-primary/10" title={__('Devices')}>
+                                                            <MonitorSmartphone className="size-4" />
+                                                        </Button>
+                                                    </Link>
                                                     <Link href={adminUsersRoute.edit(user.id).url}>
                                                         <Button variant="ghost" size="icon" className="size-8 hover:text-primary hover:bg-primary/10">
                                                             <Edit2 className="size-4" />
@@ -174,11 +192,18 @@ export default function Index({ users, filters }: Props) {
                                                                 {__('Member since')} {new Date(user.created_at).toLocaleDateString()}
                                                             </span>
                                                         </div>
-                                                        <Link href={adminUsersRoute.edit(user.id).url}>
-                                                            <Button size="sm" variant="outline" className="gap-2 border-primary/20 hover:bg-primary/5">
-                                                                <UserCog className="size-4 text-primary" /> {__('Manage Permissions')}
-                                                            </Button>
-                                                        </Link>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            <Link href={`/${currentLocale}/admin/users/${user.id}/devices`}>
+                                                                <Button size="sm" variant="outline" className="gap-2 border-primary/20 hover:bg-primary/5">
+                                                                    <MonitorSmartphone className="size-4 text-primary" /> {__('Devices')}
+                                                                </Button>
+                                                            </Link>
+                                                            <Link href={adminUsersRoute.edit(user.id).url}>
+                                                                <Button size="sm" variant="outline" className="gap-2 border-primary/20 hover:bg-primary/5">
+                                                                    <UserCog className="size-4 text-primary" /> {__('Manage Permissions')}
+                                                                </Button>
+                                                            </Link>
+                                                        </div>
                                                     </div>
                                                 </TableCell>
                                             </TableRow>

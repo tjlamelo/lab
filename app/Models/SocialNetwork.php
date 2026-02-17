@@ -3,10 +3,37 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 
 class SocialNetwork extends Model
 {
     protected $fillable = ['platform', 'url', 'order', 'is_active'];
+
+    /**
+     * Cache key for public (active) social links used on the front-end.
+     */
+    public const CACHE_KEY_PUBLIC = 'settings_social_networks';
+
+    /**
+     * Get active social networks for public display (cached).
+     *
+     * @return array<int, array{platform: string, url: string, order: int}>
+     */
+    public static function getPublicList(): array
+    {
+        return Cache::remember(self::CACHE_KEY_PUBLIC, 3600, function () {
+            return self::where('is_active', true)
+                ->orderBy('order')
+                ->get(['platform', 'url', 'order'])
+                ->map(fn ($s) => [
+                    'platform' => $s->platform,
+                    'url' => $s->formatted_url,
+                    'order' => $s->order,
+                ])
+                ->values()
+                ->all();
+        });
+    }
 
     /**
      * Retourne l'icône correspondante (ex: pour FontAwesome ou Lucide)

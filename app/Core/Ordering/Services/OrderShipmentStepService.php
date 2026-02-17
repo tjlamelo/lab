@@ -16,10 +16,6 @@ final class OrderShipmentStepService
 
     // --- OPÉRATIONS DE LECTURE (READ) ---
 
-    /**
-     * Récupère l'itinéraire complet d'une commande.
-     * Utilise le cache pour optimiser les consultations répétées par le client.
-     */
     public function getFullRoute(int $orderId): Collection
     {
         return Cache::remember(self::CACHE_KEY . $orderId, 3600, function () use ($orderId) {
@@ -29,9 +25,6 @@ final class OrderShipmentStepService
         });
     }
 
-    /**
-     * Récupère uniquement la position actuelle (dernière étape atteinte).
-     */
     public function getCurrentStatus(int $orderId): ?OrderShipmentStep
     {
         return OrderShipmentStep::where('order_id', $orderId)
@@ -40,9 +33,6 @@ final class OrderShipmentStepService
             ->first();
     }
 
-    /**
-     * Calcule les statistiques de progression pour l'UI (Barre de progression).
-     */
     public function getProgressMetrics(int $orderId): array
     {
         $steps = $this->getFullRoute($orderId);
@@ -56,36 +46,42 @@ final class OrderShipmentStepService
             'percentage' => (int) (($reached / $total) * 100),
             'current_step' => $reached,
             'total_steps' => $total,
-            'is_delivered' => $steps->last()->is_reached,
+            'is_delivered' => (bool) $steps->last()?->is_reached,
         ];
     }
 
     // --- OPÉRATIONS D'ÉCRITURE (WRITE) ---
 
     /**
-     * Initialise un parcours complet du point A au point B.
-     * Nettoie le cache après création.
+     * Initialise un parcours complet.
      */
-    public function createCustomRoute(Order $order, array $stops): void
-    {
-        foreach ($stops as $index => $stop) {
-            $dto = new OrderShipmentStepDto(
-                id: 0,
-                orderId: $order->id,
-                position: $index + 1,
-                locationName: $stop['name'],
-                statusDescription: $stop['description'] ?? null,
-                latitude: $stop['lat'] ?? null,
-                longitude: $stop['lng'] ?? null,
-                isReached: $index === 0 // Le point de départ est validé par défaut
-            );
+// Dans App\Core\Ordering\Services\OrderShipmentStepService.php
 
-            OrderShipmentStepAction::create($dto);
-        }
+public function createCustomRoute(Order $order, array $stops): void
+{
+    foreach ($stops as $index => $stop) {
+        // Par défaut, is_reached est false sauf si explicitement défini
+        $isReached = isset($stop['is_reached']) ? (bool) $stop['is_reached'] : false;
         
-        $this->clearCache($order->id);
-    }
+        $dto = new OrderShipmentStepDto(
+            id: 0,
+            orderId: $order->id,
+            position: $index + 1,
+            // CORRECTION ICI : On cast en string et non plus en array
+            locationName: (string) $stop['name'], 
+            statusDescription: isset($stop['description']) ? (string) $stop['description'] : null,
+            latitude: isset($stop['lat']) ? (float) $stop['lat'] : null,
+            longitude: isset($stop['lng']) ? (float) $stop['lng'] : null,
+            isReached: $isReached, 
+            reachedAt: $isReached ? now() : null,
+            estimatedArrival: isset($stop['estimated_arrival']) ? \Carbon\Carbon::parse($stop['estimated_arrival']) : null
+        );
 
+        OrderShipmentStepAction::create($dto);
+    }
+    
+    $this->clearCache($order->id);
+}
     /**
      * Valide l'étape suivante dans la séquence.
      */
@@ -97,7 +93,8 @@ final class OrderShipmentStepService
             ->first();
 
         if ($nextStep) {
-            OrderShipmentStepAction::markAsReached($nextStep->id);
+            // CORRECTION : On passe l'objet $nextStep et non l'ID
+            OrderShipmentStepAction::markAsReached($nextStep);
             $this->clearCache($orderId);
             return true;
         }
@@ -106,63 +103,78 @@ final class OrderShipmentStepService
     }
 
     /**
-     * Mise à jour manuelle d'une étape via son ID.
+     * Mise à jour manuelle d'une étape.
      */
-public function updateStep(int $stepId, array $data): void
-{
-    try {
-        // Log de l'entrée : On voit ce que le Front-end a envoyé
-        Log::info("Début updateStep pour ID #{$stepId}", [
-            'data_received' => $data
-        ]);
+    public function updateStep(int $stepId, array $data): void
+    {
+        try {
+            Log::info("Début updateStep pour ID #{$stepId}", ['data_received' => $data]);
 
-        // 1. On trouve l'objet
-        $step = OrderShipmentStep::findOrFail($stepId); 
-        
-        // 2. Préparation du DTO
-        // On logge le contenu avant fusion pour comparer
-        $mergedData = array_merge($step->toArray(), $data);
-        $dto = OrderShipmentStepDto::fromArray($mergedData);
-        
-        Log::debug("DTO préparé pour l'Action", [
-            'order_id' => $step->order_id,
-            'location_name_dto' => $dto->locationName // Vérifie si c'est bien un array ['fr' => '...']
-        ]);
+            $step = OrderShipmentStep::findOrFail($stepId); 
+            
+            // Fusion des données existantes avec les nouvelles pour le DTO
+            $mergedData = array_merge($step->toArray(), $data);
+            $dto = OrderShipmentStepDto::fromArray($mergedData);
+            
+            OrderShipmentStepAction::update($step, $dto); 
+            
+            $this->clearCache($step->order_id);
 
-        // 3. Appel de l'Action avec l'objet complet
-        OrderShipmentStepAction::update($step, $dto); 
-        
-        // 4. Nettoyage du cache
-        $this->clearCache($step->order_id);
+            Log::info("UpdateStep réussi pour ID #{$stepId}");
 
-        Log::info("UpdateStep réussi pour ID #{$stepId}");
-
-    } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-        Log::error("UpdateStep échoué : L'étape #{$stepId} n'existe pas en base.");
-        throw $e;
-    } catch (\Exception $e) {
-        Log::error("Erreur critique lors de updateStep #{$stepId}", [
-            'message' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-        throw $e;
+        } catch (\Exception $e) {
+            Log::error("Erreur critique lors de updateStep #{$stepId}: " . $e->getMessage());
+            throw $e;
+        }
     }
-}
+
     /**
-     * Supprime une étape et réinitialise le cache.
+     * Bascule l'état "reached" d'une étape.
      */
-    public function removeStep(int $stepId): void
+    public function toggleReached(int $stepId): void
     {
         $step = OrderShipmentStep::findOrFail($stepId);
-        $orderId = $step->order_id;
+        OrderShipmentStepAction::toggleReached($step);
+        $this->clearCache($step->order_id);
+    }
 
-        OrderShipmentStepAction::delete($stepId);
+    /**
+     * Supprime une étape.
+     */
+// Dans OrderShipmentStepService::removeStep()
+   public function removeStep(int $stepId): void
+    {
+        Log::info('[OrderShipmentStepService::removeStep] ENTRY', ['step_id' => $stepId]);
+
+        $step = OrderShipmentStep::find($stepId);
+
+        Log::info('[OrderShipmentStepService::removeStep] AFTER find', [
+            'step_id'    => $stepId,
+            'found'      => $step !== null,
+            'step_key'   => $step?->getKey(),
+            'order_id'   => $step?->order_id,
+        ]);
+
+        if (!$step) {
+            Log::warning('[OrderShipmentStepService::removeStep] Step not found', [
+                'step_id'           => $stepId,
+                'all_step_ids_in_db' => OrderShipmentStep::pluck('id')->toArray(),
+            ]);
+            throw new \Exception("Shipment step #{$stepId} not found");
+        }
+
+        $orderId = $step->order_id;
+        Log::info('[OrderShipmentStepService::removeStep] Calling Action::delete', [
+            'step_id' => $stepId,
+            'order_id' => $orderId,
+        ]);
+
+        OrderShipmentStepAction::delete($step);
+
+        Log::info('[OrderShipmentStepService::removeStep] SUCCESS', ['step_id' => $stepId]);
         $this->clearCache($orderId);
     }
 
-    /**
-     * Nettoyage du cache.
-     */
     private function clearCache(int $orderId): void
     {
         Cache::forget(self::CACHE_KEY . $orderId);

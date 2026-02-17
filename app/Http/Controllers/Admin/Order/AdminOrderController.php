@@ -48,7 +48,8 @@ class AdminOrderController extends Controller
         $order = Order::with([
             'items.product',
             'paymentMethod',
-            'user'
+            'user',
+            'shippingSteps',
         ])->findOrFail($id);
 
         return Inertia::render('admin/orders/show', [

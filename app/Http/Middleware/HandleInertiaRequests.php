@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\SocialNetwork;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -55,6 +56,7 @@ class HandleInertiaRequests extends Middleware
             'translations' => $this->getTranslations($locale),
             'supported_locales' => \Mcamara\LaravelLocalization\Facades\LaravelLocalization::getSupportedLocales(),
             'sidebarOpen' => !$request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'socialNetworks' => SocialNetwork::getPublicList(),
         ];
 
     }

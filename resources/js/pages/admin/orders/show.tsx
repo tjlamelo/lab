@@ -30,6 +30,9 @@ export default function Show({ order, config }: Props) {
     const [processingType, setProcessingType] = useState<'status' | 'payment' | null>(null);
     const [activeTab, setActiveTab] = useState<'details' | 'payment'>('details');
 
+    const shippingAddress = order.shipping_address || {};
+    const shippingName = `${shippingAddress.first_name ?? ''} ${shippingAddress.last_name ?? ''}`.trim();
+
     // Mise à jour Statut Logistique
     const updateStatus = (newStatus: string) => {
         setProcessingType('status');
@@ -146,7 +149,7 @@ export default function Show({ order, config }: Props) {
                         <div className="text-right">
                             <p className="text-sm text-gray-500">{__('Total Amount')}</p>
                             <p className="text-2xl font-bold text-gray-900">
-                                {Number(order.total_amount).toLocaleString()} XAF
+                                ${Number(order.total_amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </p>
                         </div>
                     </div>
@@ -213,13 +216,13 @@ export default function Show({ order, config }: Props) {
                                                         </div>
                                                     </td>
                                                     <td className="px-4 py-4 text-sm text-gray-900">
-                                                        {Number(item.price).toLocaleString()} XAF
+                                                        ${Number(item.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                     </td>
                                                     <td className="px-4 py-4 text-sm text-gray-900">
                                                         {item.quantity}
                                                     </td>
                                                     <td className="px-4 py-4 text-sm font-medium text-gray-900">
-                                                        {(item.price * item.quantity).toLocaleString()} XAF
+                                                        ${(item.price * item.quantity).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                     </td>
                                                 </tr>
                                             ))}
@@ -231,13 +234,13 @@ export default function Show({ order, config }: Props) {
                                     <div className="flex justify-between items-center">
                                         <span className="text-sm font-medium text-gray-500">{__('Subtotal')}</span>
                                         <span className="text-sm font-medium text-gray-900">
-                                            {Number(order.total_amount).toLocaleString()} XAF
+                                            ${Number(order.total_amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </span>
                                     </div>
                                     <div className="flex justify-between items-center mt-2">
                                         <span className="text-lg font-bold text-gray-900">{__('Total')}</span>
                                         <span className="text-lg font-bold text-gray-900">
-                                            {Number(order.total_amount).toLocaleString()} XAF
+                                            ${Number(order.total_amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </span>
                                     </div>
                                 </div>
@@ -302,20 +305,34 @@ export default function Show({ order, config }: Props) {
                                         {order.user?.name?.charAt(0) || 'U'}
                                     </div>
                                     <div>
-                                        <p className="text-sm font-medium text-gray-900">{order.user?.name}</p>
-                                        <p className="text-xs text-gray-500">{__('Customer ID')}: {order.user?.id}</p>
+                                        <p className="text-sm font-medium text-gray-900">
+                                            {(order.user?.name ?? shippingName) || __('Guest')}
+                                        </p>
+                                        {order.user && (
+                                            <p className="text-xs text-gray-500">
+                                                {__('Customer ID')}: {order.user.id}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                                 
                                 <div className="space-y-3 pt-3 border-t border-gray-100">
-                                    <div className="flex items-center gap-2 text-sm">
-                                        <Mail size={16} className="text-gray-400" />
-                                        <span className="text-gray-700">{order.user?.email}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-sm">
-                                        <Calendar size={16} className="text-gray-400" />
-                                        <span className="text-gray-700">{__('Member since')}: {dayjs(order.user?.created_at).format('YYYY')}</span>
-                                    </div>
+                                    {(order.user?.email || shippingAddress.email) && (
+                                        <div className="flex items-center gap-2 text-sm">
+                                            <Mail size={16} className="text-gray-400" />
+                                            <span className="text-gray-700">
+                                                {order.user?.email || shippingAddress.email}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {order.user && (
+                                        <div className="flex items-center gap-2 text-sm">
+                                            <Calendar size={16} className="text-gray-400" />
+                                            <span className="text-gray-700">
+                                                {__('Member since')}: {dayjs(order.user.created_at).format('YYYY')}
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -326,47 +343,131 @@ export default function Show({ order, config }: Props) {
                             <div className="space-y-4">
                                 <div className="flex items-start gap-2">
                                     <MapPin size={18} className="text-gray-400 mt-0.5" />
-                                    <div>
-                                        <p className="text-sm text-gray-700">
-                                            {order.shipping_address?.street},<br />
-                                            {order.shipping_address?.city}
-                                        </p>
+                                    <div className="text-sm text-gray-700">
+                                        {shippingName && (
+                                            <p className="font-medium">
+                                                {shippingName}
+                                                {shippingAddress.company && (
+                                                    <span className="text-gray-500"> • {shippingAddress.company}</span>
+                                                )}
+                                            </p>
+                                        )}
+                                        {shippingAddress.street && (
+                                            <p>
+                                                {shippingAddress.street}
+                                                {shippingAddress.apartment && `, ${shippingAddress.apartment}`}
+                                            </p>
+                                        )}
+                                        {(shippingAddress.city || shippingAddress.state || shippingAddress.zip_code) && (
+                                            <p>
+                                                {shippingAddress.city}
+                                                {shippingAddress.state && `, ${shippingAddress.state}`}
+                                                {shippingAddress.zip_code && ` ${shippingAddress.zip_code}`}
+                                            </p>
+                                        )}
+                                        {shippingAddress.country && (
+                                            <p className="uppercase text-gray-500 text-xs mt-1">
+                                                {shippingAddress.country}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                                 
-                                {order.shipping_address?.phone && (
+                                {shippingAddress.phone && (
                                     <div className="flex items-center gap-2">
                                         <Phone size={16} className="text-gray-400" />
-                                        <span className="text-sm text-gray-700">{order.shipping_address.phone}</span>
+                                        <span className="text-sm text-gray-700">{shippingAddress.phone}</span>
+                                    </div>
+                                )}
+
+                                {order.notes && (
+                                    <div className="mt-3 border-t border-gray-100 pt-3">
+                                        <p className="text-xs font-semibold text-gray-500 mb-1">
+                                            {__('Order notes')}
+                                        </p>
+                                        <p className="text-sm text-gray-700 whitespace-pre-line">
+                                            {order.notes}
+                                        </p>
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        {/* ORDER STATUS CARD */}
-                        <div className="bg-gray-50 rounded-lg p-6">
-                            <h3 className="text-lg font-medium text-gray-900 mb-4">{__('Order Timeline')}</h3>
-                            <div className="space-y-3">
-                                {config.statuses.map((status, index) => {
-                                    const isCompleted = config.statuses.findIndex(s => s.value === order.status) >= index;
-                                    return (
-                                        <div key={status.value} className="flex items-center gap-3">
-                                            <div className={cn(
-                                                "w-5 h-5 rounded-full flex items-center justify-center",
-                                                isCompleted ? "bg-primary text-white" : "bg-gray-200 text-gray-400"
-                                            )}>
-                                                {isCompleted && <CheckCircle2 size={14} />}
+                        {/* ORDER STATUS CARD + SHIPPING STEPS */}
+                        <div className="bg-gray-50 rounded-lg p-6 space-y-6">
+                            <div>
+                                <h3 className="text-lg font-medium text-gray-900 mb-4">{__('Order Timeline')}</h3>
+                                <div className="space-y-3">
+                                    {config.statuses.map((status, index) => {
+                                        const isCompleted = config.statuses.findIndex(s => s.value === order.status) >= index;
+                                        return (
+                                            <div key={status.value} className="flex items-center gap-3">
+                                                <div className={cn(
+                                                    "w-5 h-5 rounded-full flex items-center justify-center",
+                                                    isCompleted ? "bg-primary text-white" : "bg-gray-200 text-gray-400"
+                                                )}>
+                                                    {isCompleted && <CheckCircle2 size={14} />}
+                                                </div>
+                                                <span className={cn(
+                                                    "text-sm",
+                                                    isCompleted ? "text-gray-900 font-medium" : "text-gray-500"
+                                                )}>
+                                                    {status.label}
+                                                </span>
                                             </div>
-                                            <span className={cn(
-                                                "text-sm",
-                                                isCompleted ? "text-gray-900 font-medium" : "text-gray-500"
-                                            )}>
-                                                {status.label}
-                                            </span>
-                                        </div>
-                                    );
-                                })}
+                                        );
+                                    })}
+                                </div>
                             </div>
+
+                            {order.shipping_steps?.length > 0 && (
+                                <div className="pt-4 border-t border-gray-200">
+                                    <h4 className="text-sm font-semibold text-gray-900 mb-3">
+                                        {__('Delivery steps')}
+                                    </h4>
+                                    <div className="space-y-3">
+                                        {order.shipping_steps.map((step: any) => (
+                                            <div
+                                                key={step.id}
+                                                className={cn(
+                                                    "rounded-lg border px-3 py-2 text-sm",
+                                                    step.is_reached
+                                                        ? "border-emerald-200 bg-emerald-50"
+                                                        : "border-gray-200 bg-white"
+                                                )}
+                                            >
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <div className="font-medium text-gray-900">
+                                                        #{step.position} • {step.location_name}
+                                                    </div>
+                                                    {step.is_reached && (
+                                                        <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
+                                                            <CheckCircle2 size={14} /> {__('Reached')}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {step.status_description && (
+                                                    <p className="mt-1 text-xs text-gray-600">
+                                                        {step.status_description}
+                                                    </p>
+                                                )}
+                                                <div className="mt-1 flex flex-wrap gap-3 text-[11px] text-gray-500">
+                                                    {step.estimated_arrival && (
+                                                        <span>
+                                                            {__('ETA')}: {dayjs(step.estimated_arrival).format('DD MMM YYYY HH:mm')}
+                                                        </span>
+                                                    )}
+                                                    {step.reached_at && (
+                                                        <span>
+                                                            {__('Reached at')}: {dayjs(step.reached_at).format('DD MMM YYYY HH:mm')}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

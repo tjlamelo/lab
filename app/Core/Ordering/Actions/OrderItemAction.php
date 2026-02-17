@@ -33,26 +33,25 @@ final class OrderShipmentStepAction
     /**
      * Met à jour une étape existante de manière sécurisée.
      */
-    public static function update(int $id, OrderShipmentStepDto $dto): void
-    {
-        DB::transaction(function () use ($id, $dto) {
-            $step = OrderShipmentStep::findOrFail($id);
-            
-            // Verrouille la ligne pour cette transaction
-            $step->lockForUpdate();
+public static function update(int $id, OrderShipmentStepDto $dto): void
+{
+    DB::transaction(function () use ($id, $dto) {
+        // CORRECT : On récupère et on verrouille en une seule fois
+        $step = OrderShipmentStep::where('id', $id)
+            ->lockForUpdate()
+            ->firstOrFail();
 
-            $step->update([
-                'position'           => $dto->position,
-                'location_name'      => $dto->locationName,
-                'status_description' => $dto->statusDescription,
-                'latitude'           => $dto->latitude,
-                'longitude'          => $dto->longitude,
-                'estimated_arrival'  => $dto->estimatedArrival,
-                'is_reached'         => $dto->isReached,
-                // On ne change pas l'order_id via update pour la sécurité
-            ]);
-        });
-    }
+        $step->update([
+            'position'           => $dto->position,
+            'location_name'      => $dto->locationName,
+            'status_description' => $dto->statusDescription,
+            'latitude'           => $dto->latitude,
+            'longitude'          => $dto->longitude,
+            'estimated_arrival'  => $dto->estimatedArrival,
+            'is_reached'         => $dto->isReached,
+        ]);
+    });
+}
 
     /**
      * Valide le passage du colis à un point précis.

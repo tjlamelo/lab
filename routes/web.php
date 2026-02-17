@@ -5,7 +5,10 @@ use App\Http\Controllers\Admin\Catalog\ProductController;
 use App\Http\Controllers\Admin\Order\AdminOrderController;
 use App\Http\Controllers\Admin\Order\OrderShipmentStepController;
 use App\Http\Controllers\Admin\Other\SocialNetworkController;
+use App\Http\Controllers\Admin\Pricing\PaymentMethodController;
 use App\Http\Controllers\Admin\User\UserController;
+use App\Http\Controllers\Admin\User\UserDeviceController;
+use App\Http\Controllers\Admin\Security\BlacklistController;
 use App\Http\Controllers\Ordering\OrderController;
 use App\Http\Controllers\Shop\CartController;
 use App\Http\Controllers\Shop\ExploreController;
@@ -54,6 +57,13 @@ Route::group([
     // === Routes Publiques de la Boutique ===
     Route::get('/', [HomeController::class, 'index'])->name('shop.home');
 
+    // === Suivi de commande public ===
+    Route::prefix('track-order')->name('public.order-tracking.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Public\OrderTrackingController::class, 'index'])->name('index');
+        Route::post('/search', [\App\Http\Controllers\Public\OrderTrackingController::class, 'search'])->name('search');
+        Route::get('/{orderNumber}', [\App\Http\Controllers\Public\OrderTrackingController::class, 'show'])->name('show');
+    });
+
     // Groupe pour le catalogue (Produits & Catégories)
     Route::prefix('catalog')->group(function () {
         Route::resource('products', ProductController::class);
@@ -92,10 +102,9 @@ Route::group([
             Route::post('/', [OrderController::class, 'store'])->name('store');
         });
 
-        // Tableau de bord utilisateur
-        Route::get('dashboard', function () {
-            return Inertia::render('dashboard');
-        })->name('dashboard');
+        // Dashboard (admin stats)
+        Route::get('dashboard', [\App\Http\Controllers\Admin\SystemDashboardController::class, 'index'])
+            ->name('dashboard');
 
         // === Routes du Panneau d'Administration ===
         // Toutes les routes d'administration sont regroupées ici.
@@ -108,6 +117,11 @@ Route::group([
                 Route::put('/{id}/access', [UserController::class, 'updateAccess'])->name('update.access');
                 Route::patch('/{id}/toggle', [UserController::class, 'toggleStatus'])->name('toggle');
                 Route::delete('/{id}', [UserController::class, 'destroy'])->name('destroy');
+
+                // Devices liés à l'utilisateur
+                Route::get('/{id}/devices', [UserDeviceController::class, 'index'])->name('devices.index');
+                Route::patch('/devices/{deviceId}/toggle-trusted', [UserDeviceController::class, 'toggleTrusted'])->name('devices.toggle-trusted');
+                Route::delete('/devices/{deviceId}', [UserDeviceController::class, 'destroy'])->name('devices.destroy');
             });
 
             // Gestion des Commandes (côté admin)
@@ -128,12 +142,45 @@ Route::group([
                 Route::patch('/{id}/toggle', [SocialNetworkController::class, 'toggle'])->name('toggle');
                 Route::patch('/reorder', [SocialNetworkController::class, 'reorder'])->name('reorder');
             });
+
+            // Gestion des moyens de paiement
+            Route::prefix('payment-methods')->name('payment-methods.')->group(function () {
+                Route::get('/', [PaymentMethodController::class, 'index'])->name('index');
+                Route::get('/{id}', [PaymentMethodController::class, 'show'])->name('show');
+                Route::post('/', [PaymentMethodController::class, 'store'])->name('store');
+                Route::put('/{id}', [PaymentMethodController::class, 'update'])->name('update');
+                Route::patch('/{id}/toggle', [PaymentMethodController::class, 'toggle'])->name('toggle');
+                Route::delete('/{id}', [PaymentMethodController::class, 'destroy'])->name('destroy');
+            });
+
+            // Gestion des Emails
+            Route::prefix('mail')->name('mail.')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Admin\Mail\MailManagementController::class, 'index'])->name('index');
+                Route::get('/create', [\App\Http\Controllers\Admin\Mail\MailManagementController::class, 'create'])->name('create');
+                Route::get('/settings', [\App\Http\Controllers\Admin\Mail\MailManagementController::class, 'settings'])->name('settings');
+                Route::put('/settings', [\App\Http\Controllers\Admin\Mail\MailManagementController::class, 'updateSettings'])->name('settings.update');
+                Route::post('/send-test', [\App\Http\Controllers\Admin\Mail\MailManagementController::class, 'sendTest'])->name('send-test');
+                Route::post('/send-custom', [\App\Http\Controllers\Admin\Mail\MailManagementController::class, 'sendCustom'])->name('send-custom');
+                Route::get('/bulk-create', [\App\Http\Controllers\Admin\Mail\MailManagementController::class, 'bulkCreate'])->name('bulk-create');
+                Route::post('/send-bulk', [\App\Http\Controllers\Admin\Mail\MailManagementController::class, 'sendBulk'])->name('send-bulk');
+            });
+
+            // Sécurité: Blacklist
+            Route::prefix('security')->name('security.')->group(function () {
+                Route::prefix('blacklist')->name('blacklist.')->group(function () {
+                    Route::get('/', [BlacklistController::class, 'index'])->name('index');
+                    Route::post('/', [BlacklistController::class, 'store'])->name('store');
+                    Route::post('/block-user/{user}', [BlacklistController::class, 'blockUser'])->name('block-user');
+                    Route::delete('/{id}', [BlacklistController::class, 'destroy'])->name('destroy');
+                });
+            });
         });
         Route::prefix('admin/orders/{order}/tracking')->name('admin.orders.tracking.')->group(function () {
             Route::get('/', [OrderShipmentStepController::class, 'index'])->name('index');
             Route::post('/initialize', [OrderShipmentStepController::class, 'store'])->name('initialize');
             Route::post('/advance', [OrderShipmentStepController::class, 'advance'])->name('advance');
             Route::put('/steps/{step}', [OrderShipmentStepController::class, 'update'])->name('update');
+            Route::patch('/steps/{step}/toggle', [OrderShipmentStepController::class, 'toggle'])->name('toggle');
             Route::delete('/steps/{step}', [OrderShipmentStepController::class, 'destroy'])->name('destroy');
         });
     });

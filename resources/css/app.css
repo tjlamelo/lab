@@ -147,14 +147,27 @@
         @apply bg-background text-foreground font-sans antialiased;
     }
 }
-/* Masquer la barre de défilement pour Chrome, Safari et Opera */
-.scrollbar-hide::-webkit-scrollbar {
-    display: none;
+
+/* Scrollbar globale, fine et cohérente avec le thème */
+* {
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: oklch(0.556 0 0) transparent; /* thumb, track */
 }
 
-/* Masquer la barre de défilement pour IE, Edge et Firefox */
-.scrollbar-hide {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+*::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
 }
 
+*::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: oklch(0.556 0 0); /* muted-foreground */
+    border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: oklch(0.708 0 0);
+}

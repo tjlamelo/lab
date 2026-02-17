@@ -17,7 +17,7 @@ final class PaymentMethodAction
         return DB::transaction(function () use ($dto) {
             return PaymentMethod::create([
                 'name'         => $dto->name,
-                'slug'         => $dto->slug ?: Str::slug($dto->name['en'] ?? $dto->name['fr']),
+                'slug'         => $dto->slug ?: Str::slug($dto->name),
                 'instructions' => $dto->instructions,
                 'logo'         => $dto->logo,
                 'is_active'    => $dto->isActive,

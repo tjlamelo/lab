@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { Home, Grid, ShoppingCart, User } from 'lucide-react';
+import { Home, Grid, ShoppingCart, User, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -9,17 +9,44 @@ export function MobileNav({ auth }: { auth: any }) {
     // Récupération du compte (partagé via HandleInertiaRequests)
     const cartCount = (props as any).cart?.count || 0;
     const hasItems = cartCount > 0;
+    
+    // Récupérer le locale depuis l'URL ou les props (en s'assurant que c'est une string)
+    const getLocale = () => {
+        const propsLocale = (props as any)?.locale;
+        if (typeof propsLocale === 'string') {
+            return propsLocale;
+        }
+        // Sinon, extraire depuis l'URL
+        const pathParts = url.split('/').filter(Boolean);
+        const supportedLocales = ['en', 'fr', 'ar', 'ru', 'zh'];
+        if (pathParts.length > 0 && supportedLocales.includes(pathParts[0])) {
+            return pathParts[0];
+        }
+        return 'en';
+    };
+    const locale = getLocale();
 
     const navItems = [
         { label: 'Home', href: '/', icon: Home },
         { label: 'Explore', href: '/explore', icon: Grid },
         { label: 'Cart', href: '/cart', icon: ShoppingCart },
-        { 
-            label: auth.user ? 'Profile' : 'Sign in', 
-            href: auth.user ? '/dashboard' : '/login', 
-            icon: User 
-        },
     ];
+
+    // Ajouter le lien de suivi de commande si l'utilisateur est connecté
+    if (auth.user) {
+        navItems.push({
+            label: 'Track Order',
+            href: `/${locale}/track-order`,
+            icon: Package
+        });
+    }
+
+    // Ajouter le profil/connexion à la fin
+    navItems.push({ 
+        label: auth.user ? 'Profile' : 'Sign in', 
+        href: auth.user ? '/dashboard' : '/login', 
+        icon: User 
+    });
 
     return (
         <nav className={cn(

@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Core\Ordering\Services\CartCacheService;
 use App\Core\Ordering\Services\OrderService;
 use App\Core\Ordering\Dto\OrderDto;
-use Illuminate\Http\Request;
+use App\Http\Requests\Ordering\StoreOrderRequest;
 use Inertia\Inertia;
 
 class OrderController extends Controller
@@ -42,17 +42,9 @@ class OrderController extends Controller
      */
     // app/Http/Controllers/Ordering/OrderController.php
 
-    public function store(Request $request)
+    public function store(StoreOrderRequest $request)
     {
-        $validated = $request->validate([
-            'payment_method_id' => 'required|exists:payment_methods,id',
-            'shipping_address' => 'required|array',
-            'shipping_address.phone' => 'required|string',
-            'shipping_address.city' => 'required|string',
-            'shipping_address.street' => 'required|string',
-            'notes' => 'nullable|string|max:1000',
-            'payment_proof' => 'required|image|max:5120', // Max 5MB
-        ]);
+        $validated = $request->validated();
 
         // 1. Gérer le fichier
         if ($request->hasFile('payment_proof')) {

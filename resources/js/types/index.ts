@@ -1,3 +1,5 @@
+// resources/js/types/index.ts
+
 export type * from './auth';
 export type * from './navigation';
 export type * from './ui';
@@ -10,6 +12,7 @@ export type SharedData = {
     sidebarOpen: boolean;
     [key: string]: unknown;
 };
+
 // Définition de l'Enum pour la sécurité des clés
 export enum LanguageCode {
     EN = 'en',
@@ -38,3 +41,60 @@ export const SUPPORTED_LANGUAGES: LanguageConfig[] = [
 
 // Type utile pour l'objet "name" du produit
 export type MultilingualString = Record<LanguageCode, string>;
+
+// Types pour la page de checkout
+export interface AddressData {
+    first_name: string;
+    last_name: string;
+    phone: string;
+    email: string;
+    country: string;
+    state: string;
+    city: string;
+    zip_code: string;
+    street: string; // Changé de 'address' à 'street'
+    apartment: string;
+    company: string;
+}
+
+export interface CheckoutFormData {
+    payment_method_id: string;
+    shipping_address: AddressData;
+    billing_address: AddressData & { same_as_shipping: boolean };
+    shipping_method: string;
+    notes: string;
+    payment_proof: File | null;
+}
+
+export interface PaymentMethod {
+    id: number;
+    name: string | Record<string, string>;
+    instructions: string | Record<string, string> | null;
+    payment_details: Record<string, string> | null;
+    slug: string;
+    logo: string | null;
+}
+
+export interface CartItem {
+    name: string;
+    price: number;
+    quantity: number;
+}
+
+export interface CartData {
+    items: CartItem[];
+    total: number;
+    count: number;
+}
+
+export interface ShippingMethod {
+    id: string;
+    name: string;
+    price: number;
+    days: string;
+}
+
+export interface Country {
+    code: string;
+    name: string;
+}

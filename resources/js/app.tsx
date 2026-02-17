@@ -8,6 +8,7 @@ import { initializeTheme } from './hooks/use-appearance';
 // Importations des composants de notification
 import { Toaster } from './components/ui/sonner';
 import { FlashHandler } from '@/components/flash-handler';
+import { FloatingSocialBar } from '@/components/floating-social-bar';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -34,6 +35,7 @@ createInertiaApp({
                                 richColors
                             />
                             <FlashHandler />
+                            <FloatingSocialBar />
                         </>
                     )}
                 </App>

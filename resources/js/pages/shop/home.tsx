@@ -1,7 +1,8 @@
 import React from 'react';
 import ShopLayout from '@/layouts/shop/shop-layout';
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { HeroSection } from '@/components/shop/hero-section';
+import shop from '@/routes/shop';
 
 // 1. Définir l'interface pour un produit (basé sur ton modèle Laravel)
 interface Product {
@@ -21,19 +22,24 @@ interface HomeProps {
 }
 
 export default function Home({ products }: HomeProps) {
-    // Debug pour confirmer
-    console.log("📦 Props directes :", products);
-
     return (
         <ShopLayout>
             <Head title="Home" />
-            
-            {/* On passe "products" directement car c'est lui le tableau */}
-            {products && products.length > 0 ? (
-                <HeroSection products={products} />
-            ) : (
-                <div className="p-10 text-center">Aucun produit trouvé</div>
-            )}
+
+            <main className="min-h-screen bg-background flex flex-col">
+                {/* Hero dynamique avec produit mis en avant */}
+                {products && products.length > 0 ? (
+                    <HeroSection products={products} />
+                ) : (
+                    <div className="flex-1 flex items-center justify-center px-6 py-16 text-center">
+                        <p className="text-sm font-medium text-muted-foreground">
+                            Aucun produit trouvé pour le moment.
+                        </p>
+                    </div>
+                )}
+ 
+       
+            </main>
         </ShopLayout>     
     );
 }

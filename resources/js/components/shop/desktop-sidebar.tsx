@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { Home, Grid, ShoppingCart, User } from 'lucide-react';
+import { Home, Grid, ShoppingCart, User, Package } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,11 +10,36 @@ export function DesktopSidebar({ auth }: { auth: any }) {
     // Récupération du compte (partagé via HandleInertiaRequests)
     const cartCount = (props as any).cart?.count || 0;
     const hasItems = cartCount > 0;
+    
+    // Récupérer le locale depuis l'URL ou les props (en s'assurant que c'est une string)
+    const getLocale = () => {
+        const propsLocale = (props as any)?.locale;
+        if (typeof propsLocale === 'string') {
+            return propsLocale;
+        }
+        // Sinon, extraire depuis l'URL
+        const pathParts = url.split('/').filter(Boolean);
+        const supportedLocales = ['en', 'fr', 'ar', 'ru', 'zh'];
+        if (pathParts.length > 0 && supportedLocales.includes(pathParts[0])) {
+            return pathParts[0];
+        }
+        return 'en';
+    };
+    const locale = getLocale();
 
     const navItems = [
         { href: "/", icon: Home, label: "Home" },
         { href: "/explore", icon: Grid, label: "Explore" },
     ];
+
+    // Ajouter le lien de suivi de commande si l'utilisateur est connecté
+    if (auth.user) {
+        navItems.push({
+            href: `/${locale}/track-order`,
+            icon: Package,
+            label: "Track Order"
+        });
+    }
 
     return (
         <aside className="hidden lg:flex sticky top-0 h-screen w-[4.75rem] bg-[#FCFCFC] z-40 flex-col items-center py-5 justify-between border-none">

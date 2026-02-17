@@ -1,13 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
-import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { 
     MapPin, 
@@ -25,29 +24,44 @@ import {
     Navigation,
     MapPinned,
     Flag,
+    Play,
+    Pause,
     RefreshCw,
+    Save,
+    X,
+    GripVertical,
     Map,
-    Search
+    Search,
+    ArrowLeft,
+    Circle,
+    Info,
+    ChevronRight,
+    Upload
 } from 'lucide-react';
 import { useTranslate } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import dayjs from 'dayjs';
+import AppLayout from '@/layouts/app-layout';
 
-// Interface mise à jour pour correspondre au modèle Laravel
 interface Step {
     id: number;
-    location_name: { [key: string]: string }; // Objet multilingue
-    status_description: { [key: string]: string } | null; // Objet multilingue ou null
+    order_id: number;
+    position: number;
+    location_name: string;
+    status_description: string | null;
     is_reached: boolean;
     reached_at: string | null;
-    position: number;
+    estimated_arrival: string | null;
     latitude?: number;
     longitude?: number;
-    estimated_arrival?: string;
 }
 
 interface Props {
-    order: any;
+    order: {
+        id: number;
+        order_number: string;
+        reference: string;
+    };
     steps: Step[];
     metrics: {
         percentage: number;
@@ -60,28 +74,23 @@ interface Props {
         error?: string;
         info?: string;
     };
-    currentLocale?: string;
-    availableLocales?: string[];
 }
 
-export default function TrackingManagement({ 
-    order, 
-    steps, 
-    metrics, 
-    flash,
-    currentLocale = 'fr',
-    availableLocales = ['fr', 'en']
-}: Props) {
+export default function OrderTrackingManagement({ order, steps, metrics, flash }: Props) {
     const { __ } = useTranslate();
     const { props } = usePage();
+    const locale = (props as { locale?: string })?.locale ?? 'en';
+    const trackingBase = `/${locale}/admin/orders/${order.id}/tracking`;
     const [isProcessing, setIsProcessing] = useState(false);
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [isViewMapDialogOpen, setIsViewMapDialogOpen] = useState(false);
+    const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
     const [selectedStep, setSelectedStep] = useState<Step | null>(null);
     const [draggedItem, setDraggedItem] = useState<number | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [showReachedOnly, setShowReachedOnly] = useState(false);
+    const [bulkImportText, setBulkImportText] = useState('');
     
     // Form state
     const [formData, setFormData] = useState({
@@ -90,26 +99,14 @@ export default function TrackingManagement({
         latitude: '',
         longitude: '',
         estimated_arrival: '',
-        is_reached: false
+        is_reached: false,
+        position: steps.length + 1
     });
-
-    // Fonction pour obtenir le texte localisé
-    const getLocalizedText = (field: { [key: string]: string } | string | null, fallback = ''): string => {
-        if (!field) return fallback;
-        if (typeof field === 'string') return field;
-        
-        // Essayer d'abord la langue actuelle, puis la langue par défaut
-        return field[currentLocale] || field['fr'] || field['en'] || fallback || '';
-    };
 
     // Filtrer les étapes selon la recherche
     const filteredSteps = steps.filter(step => {
-        // Utiliser la fonction pour obtenir le texte localisé
-        const locationName = getLocalizedText(step.location_name).toLowerCase();
-        const statusDescription = getLocalizedText(step.status_description).toLowerCase();
-        
-        const matchesSearch = locationName.includes(searchTerm.toLowerCase()) ||
-            statusDescription.includes(searchTerm.toLowerCase());
+        const matchesSearch = step.location_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (step.status_description && step.status_description.toLowerCase().includes(searchTerm.toLowerCase()));
         
         const matchesFilter = !showReachedOnly || step.is_reached;
         
@@ -124,46 +121,51 @@ export default function TrackingManagement({
             latitude: '',
             longitude: '',
             estimated_arrival: '',
-            is_reached: false
+            is_reached: false,
+            position: steps.length + 1
         });
     };
 
     // Ouvrir le dialogue d'édition
     const openEditDialog = (step: Step) => {
         setSelectedStep(step);
+        // Réinitialiser d'abord le formulaire pour éviter les conflits de state
+        resetForm();
+        // Puis mettre à jour avec les données de l'étape
         setFormData({
-            location_name: getLocalizedText(step.location_name),
-            status_description: getLocalizedText(step.status_description),
+            location_name: step.location_name,
+            status_description: step.status_description || '',
             latitude: step.latitude ? step.latitude.toString() : '',
             longitude: step.longitude ? step.longitude.toString() : '',
             estimated_arrival: step.estimated_arrival ? dayjs(step.estimated_arrival).format('YYYY-MM-DDTHH:mm') : '',
-            is_reached: step.is_reached
+            is_reached: step.is_reached,
+            position: step.position
         });
         setIsEditDialogOpen(true);
     };
 
-    // Créer une nouvelle étape avec support multilingue
+    // Ouvrir le dialogue de création (toujours reset pour éviter "reached" qui reste à true)
+    const openCreateDialog = () => {
+        setSelectedStep(null);
+        resetForm();
+        // Forcer reached à false à la création (même si le state a été pollué par une édition)
+        setFormData(prev => ({ ...prev, is_reached: false }));
+        setIsCreateDialogOpen(true);
+    };
+
+    // Créer une nouvelle étape
     const handleCreate = () => {
         setIsProcessing(true);
         
-        // Créer un objet multilingue pour location_name
-        const locationNameObj: { [key: string]: string } = {};
-        availableLocales.forEach(locale => {
-            locationNameObj[locale] = formData.location_name;
-        });
-        
-        // Créer un objet multilingue pour status_description
-        const statusDescriptionObj: { [key: string]: string } = {};
-        availableLocales.forEach(locale => {
-            statusDescriptionObj[locale] = formData.status_description;
-        });
-        
-        router.post(`/admin/orders/${order.id}/tracking/initialize`, {
+        router.post(`${trackingBase}/initialize`, {
             stops: [{
-                name: locationNameObj, // Objet multilingue
-                description: statusDescriptionObj, // Objet multilingue
+                name: formData.location_name,
+                description: formData.status_description,
                 lat: formData.latitude ? parseFloat(formData.latitude) : null,
-                lng: formData.longitude ? parseFloat(formData.longitude) : null
+                lng: formData.longitude ? parseFloat(formData.longitude) : null,
+                estimated_arrival: formData.estimated_arrival,
+                // IMPORTANT: à la création, on force reached à false
+                is_reached: false
             }]
         }, {
             onSuccess: () => {
@@ -178,48 +180,65 @@ export default function TrackingManagement({
         });
     };
 
-    // Mettre à jour une étape avec support multilingue
-const handleUpdate = () => {
-    if (!selectedStep) return;
-    
-    setIsProcessing(true);
-    
-    // Vérifie bien que selectedStep.id est celui que tu vois dans l'erreur (le 3)
-    router.put(`/admin/orders/${order.id}/tracking/steps/${selectedStep.id}`, {
-        location_name: { fr: formData.location_name },
-        status_description: { fr: formData.status_description },
-        latitude: formData.latitude ? parseFloat(formData.latitude) : null,
-        longitude: formData.longitude ? parseFloat(formData.longitude) : null,
-        estimated_arrival: formData.estimated_arrival,
-        is_reached: formData.is_reached
-    }, {
-        onSuccess: () => {
-            setIsEditDialogOpen(false);
-            setSelectedStep(null);
-            resetForm();
-            setIsProcessing(false);
-        },
-        onError: (errors) => {
-            console.error('Update error:', errors);
-            setIsProcessing(false);
-        }
-    });
-};
-
-    // Supprimer une étape
-    const handleDelete = (stepId: number) => {
-        if (confirm(__('Are you sure you want to delete this step?'))) {
-            router.delete(`/admin/orders/${order.id}/tracking/steps/${stepId}`, {
-                preserveScroll: true
-            });
-        }
+    // Mettre à jour une étape
+    const handleUpdate = () => {
+        if (!selectedStep) return;
+        
+        setIsProcessing(true);
+        
+        router.put(`${trackingBase}/steps/${selectedStep.id}`, {
+            location_name: formData.location_name,
+            status_description: formData.status_description,
+            latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+            longitude: formData.longitude ? parseFloat(formData.longitude) : null,
+            estimated_arrival: formData.estimated_arrival,
+            is_reached: formData.is_reached,
+            position: formData.position
+        }, {
+            onSuccess: () => {
+                setIsEditDialogOpen(false);
+                setSelectedStep(null);
+                resetForm();
+                setIsProcessing(false);
+            },
+            onError: (errors) => {
+                console.error('Update error:', errors);
+                setIsProcessing(false);
+            }
+        });
     };
+
+const handleDelete = (stepId: number) => {
+    if (confirm(__('Are you sure you want to delete this step?'))) {
+        const deleteUrl = `${trackingBase}/steps/${stepId}`;
+        console.log('[tracking handleDelete]', {
+            stepId,
+            orderId: order.id,
+            locale,
+            trackingBase,
+            deleteUrl,
+        });
+        router.delete(deleteUrl, {
+            preserveScroll: true,
+            onSuccess: () => {
+                console.log('[tracking handleDelete] onSuccess');
+            },
+            onError: (errors) => {
+                console.error('[tracking handleDelete] onError', errors);
+                if (errors.error) alert(errors.error);
+            },
+            onFinish: () => {
+                console.log('[tracking handleDelete] onFinish');
+            },
+        });
+    }
+};
 
     // Avancer à l'étape suivante
     const handleAdvance = () => {
         setIsProcessing(true);
         
-        router.post(`/admin/orders/${order.id}/tracking/advance`, {}, {
+        router.post(`${trackingBase}/advance`, {}, {
             onStart: () => setIsProcessing(true),
             onFinish: () => setIsProcessing(false),
         });
@@ -227,7 +246,7 @@ const handleUpdate = () => {
 
     // Marquer une étape comme atteinte/non atteinte
     const handleToggleReached = (stepId: number) => {
-        router.patch(`/admin/orders/${order.id}/tracking/steps/${stepId}/toggle`);
+        router.patch(`${trackingBase}/steps/${stepId}/toggle`);
     };
 
     // Gérer le drag & drop
@@ -259,12 +278,54 @@ const handleUpdate = () => {
                 position: index + 1
             }));
             
-            router.patch(`/admin/orders/${order.id}/tracking/reorder`, {
+            router.patch(`${trackingBase}/reorder`, {
                 ids: newOrder.map(item => item.id)
             });
         }
         
         setDraggedItem(null);
+    };
+
+    // Importation en masse
+    const handleBulkImport = () => {
+        const lines = bulkImportText.trim().split('\n');
+        const stops = lines.map(line => {
+            const parts = line.split(',').map(part => part.trim());
+            return {
+                name: parts[0] || '',
+                description: parts[1] || '',
+                lat: parts[2] ? parseFloat(parts[2]) : null,
+                lng: parts[3] ? parseFloat(parts[3]) : null
+            };
+        }).filter(stop => stop.name);
+        
+        if (stops.length === 0) {
+            alert(__('No valid steps found in the import text'));
+            return;
+        }
+        
+        router.post(`${trackingBase}/initialize`, {
+            stops
+        }, {
+            onSuccess: () => {
+                setIsBulkImportOpen(false);
+                setBulkImportText('');
+            }
+        });
+    };
+
+    // Initialiser une route standard
+    const handleInitializeStandardRoute = () => {
+        const standardStops = [
+            { name: 'Entrepôt Central', description: 'Colis prêt pour expédition', lat: null, lng: null },
+            { name: 'Centre de Tri', description: 'Traitement logistique', lat: null, lng: null },
+            { name: 'En cours de livraison', description: 'Le livreur est en route', lat: null, lng: null },
+            { name: 'Livré', description: 'Colis remis au client', lat: null, lng: null }
+        ];
+        
+        router.post(`${trackingBase}/initialize`, {
+            stops: standardStops
+        });
     };
 
     // Afficher la carte avec les étapes
@@ -274,7 +335,7 @@ const handleUpdate = () => {
 
     return (
         <AppLayout>
-            <Head title={`${__('Tracking')} - #${order.reference}`} />
+            <Head title={`${__('Tracking')} - #${order.reference || order.order_number}`} />
 
             {/* Messages flash */}
             {flash?.success && (
@@ -300,6 +361,10 @@ const handleUpdate = () => {
                 {/* HEADER */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card p-6 rounded-2xl shadow-sm border border-border">
                     <div className="flex items-center gap-4">
+                        <Button variant="ghost" size="sm" onClick={() => window.history.back()} className="gap-2">
+                            <ArrowLeft size={16} />
+                            {__('Back to Order')}
+                        </Button>
                         <div className="p-3 bg-primary/10 rounded-2xl">
                             <Package className="text-primary size-8" />
                         </div>
@@ -308,7 +373,7 @@ const handleUpdate = () => {
                                 {__('Shipment Tracking')}
                             </h1>
                             <p className="text-muted-foreground text-sm mt-1">
-                                {__('Order')} <span className="font-mono font-bold text-primary">#{order.reference}</span>
+                                {__('Order')} <span className="font-mono font-bold text-primary">#{order.reference || order.order_number}</span>
                             </p>
                         </div>
                     </div>
@@ -324,15 +389,17 @@ const handleUpdate = () => {
                             {__('View Map')}
                         </Button>
                         
-                        <Button 
-                            size="lg" 
-                            onClick={handleAdvance}
-                            disabled={metrics.is_delivered || isProcessing}
-                            className="rounded-xl px-8 shadow-lg shadow-primary/20 gap-2"
-                        >
-                            {isProcessing ? <Loader2 className="size-5 animate-spin" /> : <ArrowRight className="size-5" />}
-                            {__('Advance Progress')}
-                        </Button>
+                        {steps.length > 0 && !metrics.is_delivered && (
+                            <Button 
+                                size="lg" 
+                                onClick={handleAdvance}
+                                disabled={isProcessing}
+                                className="rounded-xl px-8 shadow-lg shadow-primary/20 gap-2"
+                            >
+                                {isProcessing ? <Loader2 className="size-5 animate-spin" /> : <Play className="size-5" />}
+                                {__('Advance Progress')}
+                            </Button>
+                        )}
                     </div>
                 </div>
 
@@ -450,7 +517,16 @@ const handleUpdate = () => {
                             </Button>
                             
                             <Button 
-                                onClick={() => setIsCreateDialogOpen(true)}
+                                variant="outline"
+                                onClick={() => setIsBulkImportOpen(true)}
+                                className="gap-2"
+                            >
+                                <Upload className="h-4 w-4" />
+                                {__('Bulk Import')}
+                            </Button>
+                            
+                            <Button 
+                                onClick={openCreateDialog}
                                 className="gap-2"
                             >
                                 <Plus className="h-4 w-4" />
@@ -504,7 +580,7 @@ const handleUpdate = () => {
                                                         <div className="flex-1">
                                                             <div className="flex items-center gap-2 mb-2">
                                                                 <h4 className="font-bold text-base">
-                                                                    {getLocalizedText(step.location_name)}
+                                                                    {step.location_name}
                                                                 </h4>
                                                                 <Badge variant={step.is_reached ? "default" : "secondary"} className="text-xs">
                                                                     {step.is_reached ? __('Reached') : __('Pending')}
@@ -519,7 +595,7 @@ const handleUpdate = () => {
                                                             
                                                             {step.status_description && (
                                                                 <p className="text-sm text-muted-foreground mb-2">
-                                                                    {getLocalizedText(step.status_description)}
+                                                                    {step.status_description}
                                                                 </p>
                                                             )}
                                                             
@@ -529,6 +605,29 @@ const handleUpdate = () => {
                                                                     {step.latitude?.toFixed(6)}, {step.longitude?.toFixed(6)}
                                                                 </div>
                                                             )}
+                                                            
+                                                            {/* Bouton d'action rapide pour reached */}
+                                                            <div className="mt-3">
+                                                                <Button
+                                                                    variant={step.is_reached ? "outline" : "default"}
+                                                                    size="sm"
+                                                                    onClick={() => handleToggleReached(step.id)}
+                                                                    className="gap-2"
+                                                                    disabled={isProcessing}
+                                                                >
+                                                                    {step.is_reached ? (
+                                                                        <>
+                                                                            <EyeOff className="h-4 w-4" />
+                                                                            {__('Mark as Pending')}
+                                                                        </>
+                                                                    ) : (
+                                                                        <>
+                                                                            <CheckCircle2 className="h-4 w-4" />
+                                                                            {__('Mark as Reached')}
+                                                                        </>
+                                                                    )}
+                                                                </Button>
+                                                            </div>
                                                         </div>
                                                         
                                                         <div className="flex items-center gap-1 ml-4">
@@ -582,29 +681,111 @@ const handleUpdate = () => {
                                     {__('No tracking steps found')}
                                 </h3>
                                 <p className="text-sm text-muted-foreground mb-4">
-                                    {__('Add your first tracking step to get started')}
+                                    {__('Add your first tracking step or initialize a standard route')}
                                 </p>
-                                <Button
-                                    onClick={() => setIsCreateDialogOpen(true)}
-                                    className="gap-2"
-                                >
-                                    <Plus className="h-4 w-4" />
-                                    {__('Add Step')}
-                                </Button>
+                                <div className="flex gap-2 justify-center">
+                                    <Button
+                                        onClick={openCreateDialog}
+                                        className="gap-2"
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                        {__('Add Step')}
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleInitializeStandardRoute}
+                                        className="gap-2"
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                        {__('Initialize Standard Route')}
+                                    </Button>
+                                </div>
                             </div>
                         )}
                     </CardContent>
                 </Card>
+
+                {/* SIDEBAR INFORMATION */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2">
+                        {/* Informations supplémentaires */}
+                        <Card className="bg-card border-border">
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Info className="h-5 w-5" />
+                                    {__('Quick Actions')}
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="p-4 bg-muted/50 rounded-lg">
+                                    <p className="text-sm font-medium mb-2">{__('Next step to reach:')}</p>
+                                    <p className="text-lg font-bold">
+                                        {steps.find(s => !s.is_reached)?.location_name || __('All steps completed')}
+                                    </p>
+                                </div>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <Button 
+                                        variant="outline" 
+                                        onClick={handleViewMap}
+                                        className="gap-2"
+                                    >
+                                        <Map className="h-4 w-4" />
+                                        {__('View on Map')}
+                                    </Button>
+                                    
+                                    <Button 
+                                        variant="outline" 
+                                        onClick={() => setIsBulkImportOpen(true)}
+                                        className="gap-2"
+                                    >
+                                        <Upload className="h-4 w-4" />
+                                        {__('Bulk Import Steps')}
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                    
+                    <div>
+                        {/* Tips */}
+                        <Card className="bg-card border-border">
+                            <CardHeader>
+                                <CardTitle>{__('Help & Tips')}</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <ul className="space-y-4">
+                                    <li className="flex gap-3 text-sm text-muted-foreground">
+                                        <ChevronRight size={18} className="shrink-0 text-primary" />
+                                        <span>{__('Click "Advance Progress" to mark the next sequential point as reached.')}</span>
+                                    </li>
+                                    <li className="flex gap-3 text-sm text-muted-foreground">
+                                        <ChevronRight size={18} className="shrink-0 text-primary" />
+                                        <span>{__('Drag and drop steps to reorder them in the timeline.')}</span>
+                                    </li>
+                                    <li className="flex gap-3 text-sm text-muted-foreground">
+                                        <ChevronRight size={18} className="shrink-0 text-primary" />
+                                        <span>{__('Bulk import allows you to add multiple steps at once using CSV format.')}</span>
+                                    </li>
+                                </ul>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
             </div>
 
             {/* Create/Edit Dialog */}
             <Dialog open={isCreateDialogOpen || isEditDialogOpen} onOpenChange={(open) => {
                 if (!open) {
+                    // Fermer les deux dialogues et réinitialiser le state
+                    setIsCreateDialogOpen(false);
+                    setIsEditDialogOpen(false);
                     resetForm();
                     setSelectedStep(null);
+                } else {
+                    // Ne pas permettre l'ouverture automatique via cette méthode
+                    // L'ouverture doit se faire via setIsCreateDialogOpen ou setIsEditDialogOpen
                 }
-                setIsCreateDialogOpen(open);
-                setIsEditDialogOpen(open);
             }}>
                 <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader>
@@ -621,9 +802,6 @@ const handleUpdate = () => {
                                 onChange={(e) => setFormData({ ...formData, location_name: e.target.value })}
                                 placeholder={__('e.g., Port of Douala')}
                             />
-                            <p className="text-xs text-muted-foreground">
-                                {__('This will be saved in all available languages')}
-                            </p>
                         </div>
                         
                         <div className="space-y-2">
@@ -635,9 +813,6 @@ const handleUpdate = () => {
                                 placeholder={__('e.g., Package is waiting for customs clearance')}
                                 rows={3}
                             />
-                            <p className="text-xs text-muted-foreground">
-                                {__('This will be saved in all available languages')}
-                            </p>
                         </div>
                         
                         <div className="grid grid-cols-2 gap-4">
@@ -676,15 +851,33 @@ const handleUpdate = () => {
                             />
                         </div>
                         
-                        <div className="flex items-center space-x-2">
-                            <Switch
-                                id="is_reached"
-                                checked={formData.is_reached}
-                                onCheckedChange={(checked) => setFormData({ ...formData, is_reached: checked })}
+                        <div className="space-y-2">
+                            <Label htmlFor="position">{__('Position')}</Label>
+                            <Input
+                                id="position"
+                                type="number"
+                                value={formData.position}
+                                onChange={(e) => setFormData({ ...formData, position: parseInt(e.target.value) || 1 })}
+                                min="1"
                             />
-                            <Label htmlFor="is_reached" className="text-sm font-medium">
-                                {__('Mark as reached')}
-                            </Label>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                            {isEditDialogOpen && (
+                                <>
+                                    <Switch
+                                        id="is_reached"
+                                        checked={formData.is_reached}
+                                        onCheckedChange={(checked) => {
+                                            setFormData(prev => ({ ...prev, is_reached: checked }));
+                                        }}
+                                        disabled={isProcessing}
+                                    />
+                                    <Label htmlFor="is_reached" className="text-sm font-medium">
+                                        {__('Mark as reached')}
+                                    </Label>
+                                </>
+                            )}
                         </div>
                     </div>
                     
@@ -714,6 +907,45 @@ const handleUpdate = () => {
                                     {isEditDialogOpen ? __('Update') : __('Create')}
                                 </>
                             )}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Bulk Import Dialog */}
+            <Dialog open={isBulkImportOpen} onOpenChange={setIsBulkImportOpen}>
+                <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                        <DialogTitle>{__('Bulk Import Steps')}</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="bulk_import">{__('Import Data')}</Label>
+                            <Textarea
+                                id="bulk_import"
+                                value={bulkImportText}
+                                onChange={(e) => setBulkImportText(e.target.value)}
+                                placeholder={__('Location Name, Description, Latitude, Longitude')}
+                                rows={8}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                {__('Format: Location Name, Description, Latitude, Longitude (one per line)')}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div className="flex justify-end gap-2 pt-4">
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsBulkImportOpen(false)}
+                        >
+                            {__('Cancel')}
+                        </Button>
+                        <Button
+                            onClick={handleBulkImport}
+                            disabled={!bulkImportText.trim()}
+                        >
+                            {__('Import')}
                         </Button>
                     </div>
                 </DialogContent>

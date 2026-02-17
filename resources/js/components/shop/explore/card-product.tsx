@@ -9,6 +9,14 @@ interface ProductProps {
 export function CardProduct({ product, ensureString, translate }: ProductProps) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const scrollRef = useRef<HTMLDivElement>(null);
+
+    const formatUSD = (amount: number) => {
+        const value = Number(amount || 0);
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+        }).format(value);
+    };
     
     // Si pas d'images, on met le logo par défaut dans un tableau
     const images = product.images && product.images.length > 0 
@@ -104,8 +112,10 @@ export function CardProduct({ product, ensureString, translate }: ProductProps) 
                 )}
 
                 {/* Price Badge */}
-                <div className="absolute top-4 right-4 bg-black/80 backdrop-blur-md px-3 py-1 rounded-full shadow-sm z-10">
-                    <span className="text-[12px] font-black text-white">{product.price} $</span>
+                <div className="absolute top-4 right-4 z-10 rounded-full bg-black/80 px-3 py-1 backdrop-blur-md shadow-sm">
+                    <span className="text-[12px] font-black text-white">
+                        {formatUSD(product.price)}
+                    </span>
                 </div>
             </div>
 

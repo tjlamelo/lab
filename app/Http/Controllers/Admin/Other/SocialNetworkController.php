@@ -14,9 +14,9 @@ use Inertia\Response;
 class SocialNetworkController extends Controller
 {
     /**
-     * Cache key used for the public front-end
+     * Cache key used for the public front-end (must match SocialNetwork::CACHE_KEY_PUBLIC)
      */
-    private const CACHE_KEY = 'settings_social_networks';
+    private const CACHE_KEY = \App\Models\SocialNetwork::CACHE_KEY_PUBLIC;
 
     /**
      * Display a listing of the resource.

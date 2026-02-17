@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { SearchBar } from './search-bar';
 import { useTranslate } from '@/lib/i18n';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from '@inertiajs/react';
+import shop from '@/routes/shop';
 
 interface Product {
     id: number;
@@ -65,11 +67,14 @@ export function HeroSection({ products = [] }: { products: Product[] }) {
     const displayImage = useMemo(() => {
         const img = activeProduct.images?.[0];
         if (!img) return '/placeholder.png';
-        return img.startsWith('http') ? img : `/storage/${img}`;
+        if (img.startsWith('http') || img.startsWith('/')) {
+            return img;
+        }
+        return `/storage/${img}`;
     }, [activeProduct]);
 
     return (
-        <section className="relative h-[calc(100vh-72px)] w-full bg-background overflow-hidden flex flex-col items-center justify-between">
+        <section className="relative min-h-[calc(100vh-80px)] w-full bg-background overflow-hidden flex flex-col items-center justify-between">
             
             {/* --- FOND RÉACTIF --- */}
             <div className="absolute inset-0 z-0 pointer-events-none">
@@ -87,7 +92,7 @@ export function HeroSection({ products = [] }: { products: Product[] }) {
             </div>
 
             {/* --- CONTENU --- */}
-            <div className="relative z-10 w-full max-w-7xl px-6 grid grid-cols-1 lg:grid-cols-2 flex-1 items-center gap-12 pt-10">
+            <div className="relative z-10 w-full max-w-7xl px-4 sm:px-6 grid grid-cols-1 lg:grid-cols-2 flex-1 items-center gap-10 pt-10 pb-8">
                 
                 {/* TEXTE DYNAMIQUE */}
                 <div className="order-2 lg:order-1 flex flex-col items-center lg:items-start text-center lg:text-left">
@@ -98,7 +103,7 @@ export function HeroSection({ products = [] }: { products: Product[] }) {
                             animate={{ x: 0, opacity: 1 }}
                             exit={{ x: 40, opacity: 0 }}
                             transition={{ duration: 0.7, ease: [0.23, 1, 0.32, 1] }}
-                            className="max-w-xl space-y-6"
+                            className="max-w-xl space-y-6 mx-auto lg:mx-0"
                         >
                             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-card/50 border border-border backdrop-blur-sm shadow-sm">
                                 <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
@@ -107,28 +112,33 @@ export function HeroSection({ products = [] }: { products: Product[] }) {
                                 </span>
                             </div>
                             
-                            <h1 className="text-4xl md:text-6xl lg:text-8xl font-black tracking-tighter leading-[0.95] min-h-[2em] flex items-center">
+                            <h1 className="text-3xl md:text-5xl lg:text-7xl font-black tracking-tighter leading-[0.98] min-h-[2em] text-center lg:text-left">
                                 {activeProduct.name}
                             </h1>
 
-                            <p className="text-muted-foreground text-lg md:text-2xl font-medium leading-relaxed line-clamp-3 min-h-[4em]">
+                            <p className="text-muted-foreground text-base md:text-lg font-medium leading-relaxed line-clamp-3 min-h-[4em] text-center lg:text-left">
                                 {activeProduct.description}
                             </p>
 
-                            <motion.button 
-                                whileHover={{ scale: 1.05, y: -5 }}
-                                whileTap={{ scale: 0.95 }}
-                                className="px-12 py-5 rounded-2xl bg-primary text-primary-foreground font-black text-xl shadow-2xl shadow-primary/30"
+                            <motion.div
+                                whileHover={{ scale: 1.05, y: -4 }}
+                                whileTap={{ scale: 0.96 }}
+                                className="inline-flex"
                             >
-                                {__('Shop Now')}
-                            </motion.button>
+                                <Link
+                                    href={shop.index.url()}
+                                    className="inline-flex items-center justify-center rounded-2xl bg-primary px-10 py-4 text-sm md:text-base font-black text-primary-foreground shadow-2xl shadow-primary/30"
+                                >
+                                    {__('Shop Now')}
+                                </Link>
+                            </motion.div>
                         </motion.div>
                     </AnimatePresence>
                 </div>
 
                 {/* IMAGE DYNAMIQUE (TAILLE FIXE) */}
                 <div className="order-1 lg:order-2 flex justify-center items-center">
-                    <div className="relative w-[300px] h-[350px] md:w-[500px] md:h-[600px] flex items-center justify-center">
+                    <div className="relative w-[260px] h-[320px] sm:w-[320px] sm:h-[380px] md:w-[460px] md:h-[540px] flex items-center justify-center">
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={`img-${activeProduct.id}`}
@@ -152,12 +162,12 @@ export function HeroSection({ products = [] }: { products: Product[] }) {
             </div>
 
             {/* --- NAVIGATION DYNAMIQUE (BAS) --- */}
-            <div className="relative z-30 w-full flex flex-col items-center gap-8 pb-8">
+            <div className="relative z-30 w-full flex flex-col items-center gap-8 pb-12">
                 
                 {/* Search Bar flottante */}
-                <div className="w-full max-w-2xl px-6">
+                <div className="w-full max-w-2xl px-4 sm:px-6">
                     <div className="bg-card/90 backdrop-blur-xl p-2 rounded-[2.5rem] shadow-2xl border border-border/50 group focus-within:border-primary transition-all">
-                        <SearchBar placeholder={__('Search products...')} />
+                        <SearchBar />
                     </div>
                 </div>
 

@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { 
     LayoutGrid, 
     ShoppingBasket, 
@@ -8,6 +8,8 @@ import {
     Share2, 
     CreditCard, 
     MapPinned,
+    Mail,
+    ShieldAlert,
 } from 'lucide-react';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -33,14 +35,34 @@ import categoriesRoute from '@/routes/categories';
 import adminUsersRoute from '@/routes/admin/users';
 import adminOrders from '@/routes/admin/orders';
 import socials from '@/routes/admin/socials';
+import paymentMethodsRoute from '@/routes/admin/payment-methods';
 
 export function AppSidebar() {
     const { __ } = useTranslate();
+    const { props } = usePage();
+    const locale = (props as { locale?: string })?.locale ?? 'en';
+
+    // Helper pour obtenir le locale depuis l'URL ou les props
+    const getLocale = (): string => {
+        const propsLocale = (props as any)?.locale;
+        if (typeof propsLocale === 'string') {
+            return propsLocale;
+        }
+        if (typeof window !== 'undefined') {
+            const pathParts = window.location.pathname.split('/').filter(Boolean);
+            const supportedLocales = ['en', 'fr', 'ar', 'ru', 'zh'];
+            if (pathParts.length > 0 && supportedLocales.includes(pathParts[0])) {
+                return pathParts[0];
+            }
+        }
+        return 'en';
+    };
+    const currentLocale = getLocale();
 
     const mainNavItems: NavItem[] = [
         {
             title: __('Dashboard'),
-            href: dashboard(),
+            href: dashboard().url,
             icon: LayoutGrid,
         },
         /* --- CATALOG SECTION --- */
@@ -71,10 +93,21 @@ export function AppSidebar() {
             href: adminUsersRoute.index().url,
             icon: Users,
         },
+        /* --- COMMUNICATION SECTION --- */
+        {
+            title: __('Mail Management'),
+            href: `/${currentLocale}/admin/mail`,
+            icon: Mail,
+        },
         /* --- SETTINGS SECTION --- */
         {
+            title: __('Blacklist'),
+            href: `/${currentLocale}/admin/security/blacklist`,
+            icon: ShieldAlert,
+        },
+        {
             title: __('Payment Methods'),
-            href: socials.index().url, // Update with correct route
+            href: paymentMethodsRoute.index().url,
             icon: CreditCard,
         },
         {
@@ -90,14 +123,12 @@ export function AppSidebar() {
                 <SidebarMenu>
                     <SidebarMenuItem className="flex items-center justify-between gap-2 pr-2">
                         <SidebarMenuButton size="lg" asChild>
-                            <Link href={dashboard()} prefetch>
+                            <Link href={dashboard().url} prefetch>
                                 <AppLogo />
                             </Link>
                         </SidebarMenuButton>
-                        {/* Le switcher reste visible même en mode icône si nécessaire */}
-                        <div className="flex-shrink-0 scale-90">
-                             <LanguageSwitcher />
-                        </div>
+                      
+                   
                     </SidebarMenuItem>
                 </SidebarMenu>
             </SidebarHeader>

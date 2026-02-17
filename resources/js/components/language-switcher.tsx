@@ -21,7 +21,26 @@ const LANGUAGES = [
 ];
 
 export default function LanguageSwitcher() {
-    const { locale } = usePage<any>().props;
+    const { locale: propsLocale } = usePage<any>().props;
+    
+    // S'assurer que locale est toujours une string
+    const getLocale = (): string => {
+        if (typeof propsLocale === 'string') {
+            return propsLocale;
+        }
+        // Si c'est un objet, essayer d'extraire depuis l'URL
+        if (typeof window !== 'undefined') {
+            const pathParts = window.location.pathname.split('/').filter(Boolean);
+            const supportedLocales = ['en', 'fr', 'ar', 'ru', 'zh'];
+            if (pathParts.length > 0 && supportedLocales.includes(pathParts[0])) {
+                return pathParts[0];
+            }
+        }
+        return 'en';
+    };
+    
+    const locale = getLocale();
+    
     const handleLanguageChange = (newLocale: string) => {
         router.post(Routes.change_language.url(), { locale: newLocale }, {
             preserveScroll: true,

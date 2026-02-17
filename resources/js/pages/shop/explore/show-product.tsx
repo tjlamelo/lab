@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Head, router } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import { useTranslate } from '@/lib/i18n';
 import ShopLayout from '@/layouts/shop/shop-layout';
 import cartRoutes from '@/routes/cart'; 
@@ -18,6 +18,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { SeoHead } from '@/components/seo/seo-head';
+import shop from '@/routes/shop';
 
 interface ProductShowProps {
     product: any;
@@ -26,6 +28,8 @@ interface ProductShowProps {
 
 export default function ShowProduct({ product, relatedProducts = [] }: ProductShowProps) {
     const { __ } = useTranslate();
+    const { props } = usePage<any>();
+    const locale = (props as any)?.locale || 'en';
     const [isAdding, setIsAdding] = useState(false);
     const [isFavorited, setIsFavorited] = useState(false);
     const [quantity, setQuantity] = useState('1');
@@ -59,6 +63,72 @@ export default function ShowProduct({ product, relatedProducts = [] }: ProductSh
             currency: 'USD',
         }).format(amount);
     };
+
+    // --- SEO ---
+    const meta = product.meta || {};
+    const seo = meta.seo || {};
+
+    const getLocalized = (value: any): string => {
+        if (!value) return '';
+        if (typeof value === 'string') return value;
+        if (typeof value === 'object') {
+            return (
+                value[locale] ||
+                value.en ||
+                (Object.values(value)[0] as string) ||
+                ''
+            );
+        }
+        return '';
+    };
+
+    const seoTitle =
+        getLocalized(seo.title) ||
+        `${ensureString(product.name)} - PrimeLab`;
+
+    const seoDescription =
+        getLocalized(seo.description) ||
+        ensureString(product.description) ||
+        __('High quality chemical solutions by PrimeLab.');
+
+    let seoKeywords: string | string[] | undefined;
+    if (seo.keywords) {
+        if (typeof seo.keywords === 'string') {
+            seoKeywords = seo.keywords;
+        } else if (typeof seo.keywords === 'object') {
+            seoKeywords =
+                seo.keywords[locale] ||
+                seo.keywords.en ||
+                (Object.values(seo.keywords)[0] as string);
+        }
+    }
+
+    // Open Graph / X image & type depuis le SEO généré si disponible
+    const openGraph = meta.open_graph || {};
+    const xMeta = meta.x || {};
+
+    const primaryImage = images[0];
+    const fallbackImageUrl =
+        typeof primaryImage === 'string'
+            ? primaryImage.startsWith('http') || primaryImage.startsWith('/')
+                ? primaryImage
+                : `/storage/${primaryImage}`
+            : '/img/placeholder-product.png';
+
+    const imageUrl =
+        openGraph.image ||
+        xMeta.image ||
+        fallbackImageUrl;
+
+    const canonicalUrl =
+        meta.canonical ||
+        shop.product.show.url(product.slug || product.id);
+
+    const robots = meta.robots || {};
+    const robotsIndex = robots.index !== false;
+    const robotsFollow = robots.follow !== false;
+
+    const schemaForLocale = meta.schema?.[locale] || null;
 
     // --- GESTION DE LA QUANTITÉ ---
     const startEditingQuantity = useCallback(() => {
@@ -152,7 +222,17 @@ export default function ShowProduct({ product, relatedProducts = [] }: ProductSh
 
     return (
         <ShopLayout>
-            <Head title={`${ensureString(product.name)} - PrimeLab`} />
+            <SeoHead
+                title={seoTitle}
+                description={seoDescription}
+                keywords={seoKeywords}
+                canonicalUrl={canonicalUrl}
+                imageUrl={imageUrl}
+                openGraphType={openGraph.type || 'product'}
+                robotsIndex={robotsIndex}
+                robotsFollow={robotsFollow}
+                jsonLd={schemaForLocale}
+            />
 
             <div className="min-h-screen pb-20 bg-background">
                 <div className="max-w-6xl mx-auto px-4 pt-4 md:px-6 md:pt-8">

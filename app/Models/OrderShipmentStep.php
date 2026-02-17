@@ -8,13 +8,19 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class OrderShipmentStep extends Model
 {
     protected $fillable = [
-        'order_id', 'position', 'location_name', 'status_description',
-        'latitude', 'longitude', 'is_reached', 'reached_at', 'estimated_arrival'
+        'order_id', 
+        'position', 
+        'location_name', 
+        'status_description',
+        'latitude', 
+        'longitude', 
+        'is_reached', 
+        'reached_at', 
+        'estimated_arrival'
     ];
 
     protected $casts = [
-        'location_name' => 'array',
-        'status_description' => 'array',
+        // Casts supprimés pour location_name et status_description (string par défaut)
         'is_reached' => 'boolean',
         'reached_at' => 'datetime',
         'estimated_arrival' => 'datetime',

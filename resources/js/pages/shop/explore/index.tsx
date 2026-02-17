@@ -1,10 +1,9 @@
 import React from 'react';
-import { Head, router, Link } from '@inertiajs/react'; // Ajout de Link
-import { SearchBar } from '@/components/shop/search-bar';
+import { Head, router, Link } from '@inertiajs/react';
 import { Categories } from '@/components/shop/explore/categories';
 import { CardProduct } from '@/components/shop/explore/card-product';
 import { useTranslate } from '@/lib/i18n';
-import shop from '@/routes/shop'; // Import corrigé
+import shop from '@/routes/shop';
 import ShopLayout from '@/layouts/shop/shop-layout';
 
 interface Props {
@@ -25,97 +24,103 @@ export default function ExplorePage({ categories, products, filters }: Props) {
         return '';
     };
 
- const handleFilterChange = (key: string, value: any) => {
-    // On garde TOUS les filtres actuels (incluant 'search')
-    const newFilters = { ...filters, [key]: value };
-    
-    // Si la valeur est vide, on supprime la clé
-    if (!value) delete newFilters[key];
-    
-    // Si on change de filtre, on revient à la page 1
-    if (key !== 'page') delete newFilters.page;
+    const handleFilterChange = (key: string, value: any) => {
+        // On garde TOUS les filtres actuels (incluant 'search')
+        const newFilters = { ...filters, [key]: value };
 
-    router.get(shop.index.url(), newFilters, {
-        preserveState: true,
-        replace: true,
-        preserveScroll: true,
-    });
-};
+        // Si la valeur est vide, on supprime la clé
+        if (!value) delete newFilters[key];
+
+        // Si on change de filtre, on revient à la page 1
+        if (key !== 'page') delete newFilters.page;
+
+        router.get(shop.index.url(), newFilters, {
+            preserveState: true,
+            replace: true,
+            preserveScroll: true,
+        });
+    };
     const pagination = products.meta || products;
 
     return (
         <ShopLayout>
-            <div className="mx-auto min-h-screen max-w-7xl px-6 py-12">
-                <Head title={__('Explore Products')} />
+            <Head title={__('Explore Products')} />
+            <div className="min-h-screen bg-background">
+                <div className="mx-auto max-w-6xl px-4 pt-4 pb-24 md:px-6 md:pt-8 md:pb-16">
+                    {/* HEADER */}
+                    <header className="mb-6 space-y-3">
+                        <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">
+                                {__('Explore')}
+                            </p>
+                            <h1 className="mt-1 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
+                                {__('Our Catalog')}
+                            </h1>
+                            <p className="mt-1 text-sm text-muted-foreground sm:text-base">
+                                {__('High quality chemical solutions')}
+                            </p>
+                        </div>
+                    </header>
 
-                <div className="mb-12 flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
-                    <div>
-                        <h1 className="text-4xl font-black tracking-tighter text-foreground md:text-6xl">
-                            {__('Our Catalog')}
-                        </h1>
-                        <p className="mt-2 text-lg text-muted-foreground italic">
-                            {__('High quality chemical solutions')}
-                        </p>
-                    </div>
-               
-                 
-                </div>
+                    {/* CATÉGORIES */}
+                    <section className="mb-10">
+                        <Categories
+                            categories={categories}
+                            activeId={filters.category_id}
+                            onSelect={(id) => handleFilterChange('category_id', id)}
+                            ensureString={ensureString}
+                        />
+                    </section>
 
-                <div className="mb-16">
-                    <Categories
-                        categories={categories}
-                        activeId={filters.category_id}
-                        onSelect={(id) => handleFilterChange('category_id', id)}
-                        ensureString={ensureString}
-                    />
-                </div>
+                    {/* PRODUITS */}
+                    <main className="space-y-8">
+                        {products.data.length > 0 ? (
+                            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4 lg:gap-6 xl:grid-cols-5">
+                                {products.data.map((p: any) => (
+                                    <Link
+                                        key={p.id}
+                                        href={shop.product.show.url(p.slug || p.id)}
+                                        className="transition-transform active:scale-95"
+                                    >
+                                        <CardProduct
+                                            product={p}
+                                            ensureString={ensureString}
+                                            translate={__}
+                                        />
+                                    </Link>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="rounded-[2.5rem] border-2 border-dashed py-16 text-center">
+                                <p className="text-sm font-semibold text-muted-foreground">
+                                    {__('No items found')}
+                                </p>
+                            </div>
+                        )}
 
-                <main>
-                    {products.data.length > 0 ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-10 md:gap-x-8 md:gap-y-16">
-                            {products.data.map((p: any) => (
-                                /* Lien vers la fiche produit via shop.product.show.url */
-                                <Link 
-                                    key={p.id} 
-                                    href={shop.product.show.url(p.slug || p.id)}
-                                    className="transition-transform active:scale-95"
-                                >
-                                    <CardProduct 
-                                        product={p} 
-                                        ensureString={ensureString} 
-                                        translate={__} 
+                        {pagination.last_page > 1 && (
+                            <div className="flex items-center justify-center gap-2 pt-4">
+                                {pagination.links.map((link: any, i: number) => (
+                                    <button
+                                        key={i}
+                                        disabled={!link.url || link.active}
+                                        onClick={() =>
+                                            router.get(link.url, filters, {
+                                                preserveScroll: true,
+                                            })
+                                        }
+                                        className={`h-11 rounded-2xl px-5 text-sm font-bold transition-all ${
+                                            link.active
+                                                ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
+                                                : 'border border-border bg-card hover:bg-muted'
+                                        } ${!link.url ? 'opacity-20' : ''}`}
+                                        dangerouslySetInnerHTML={{ __html: link.label }}
                                     />
-                                </Link>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="py-20 text-center border-2 border-dashed rounded-[3rem]">
-                            <p className="text-muted-foreground font-bold">{__('No items found')}</p>
-                        </div>
-                    )}
-
-                    {pagination.last_page > 1 && (
-                        <div className="mt-20 flex items-center justify-center gap-2">
-                            {pagination.links.map((link: any, i: number) => (
-                                <button
-                                    key={i}
-                                    disabled={!link.url || link.active}
-                                    onClick={() =>
-                                        router.get(link.url, filters, {
-                                            preserveScroll: true,
-                                        })
-                                    }
-                                    className={`h-12 rounded-2xl px-5 text-sm font-bold transition-all ${
-                                        link.active
-                                            ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
-                                            : 'border border-border bg-card hover:bg-muted'
-                                    } ${!link.url ? 'opacity-20' : ''}`}
-                                    dangerouslySetInnerHTML={{ __html: link.label }}
-                                />
-                            ))}
-                        </div>
-                    )}
-                </main>
+                                ))}
+                            </div>
+                        )}
+                    </main>
+                </div>
             </div>
         </ShopLayout>
     );
