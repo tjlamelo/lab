@@ -27,6 +27,32 @@ export function DesktopSidebar({ auth }: { auth: any }) {
     };
     const locale = getLocale();
 
+    const canSeeStaffArea = (() => {
+        const user = auth?.user;
+        if (!user) return false;
+
+        const allowed = new Set(['admin', 'manager', 'editor']);
+        const rawRoles = user.roles ?? user.role ?? [];
+
+        if (typeof rawRoles === 'string') {
+            return allowed.has(rawRoles);
+        }
+
+        if (Array.isArray(rawRoles)) {
+            return rawRoles.some((r: any) => {
+                if (typeof r === 'string') return allowed.has(r);
+                if (r && typeof r === 'object') return allowed.has(String(r.name || r.slug || r.id || ''));
+                return false;
+            });
+        }
+
+        if (rawRoles && typeof rawRoles === 'object') {
+            return allowed.has(String((rawRoles as any).name ?? ''));
+        }
+
+        return false;
+    })();
+
     const navItems = [
         { href: "/", icon: Home, label: "Home" },
         { href: "/explore", icon: Grid, label: "Explore" },
@@ -111,20 +137,18 @@ export function DesktopSidebar({ auth }: { auth: any }) {
                     </AnimatePresence>
                 </Link>
 
-                <Link href={auth.user ? "/dashboard" : "/login"} className="relative group p-3 flex flex-col items-center transition-all duration-200 opacity-35 hover:opacity-100">
-                    {auth.user ? (
-                        <img 
-                            src={`https://ui-avatars.com/api/?name=${auth.user.name}&background=5433EB&color=fff`} 
+                {canSeeStaffArea && (
+                    <Link
+                        href="/dashboard"
+                        className="relative group p-3 flex flex-col items-center transition-all duration-200 opacity-35 hover:opacity-100"
+                    >
+                        <img
+                            src={`https://ui-avatars.com/api/?name=${auth.user.name}&background=5433EB&color=fff`}
                             className="h-7 w-7 rounded-full object-cover border border-gray-100"
-                            alt="Profil"
+                            alt="Profile"
                         />
-                    ) : (
-                        <div className="flex flex-col items-center gap-1">
-                            <User className="h-6 w-6 text-black" />
-                            <span className="text-[10px] font-medium text-black">Sign in</span>
-                        </div>
-                    )}
-                </Link>
+                    </Link>
+                )}
             </div>
         </aside>
     );

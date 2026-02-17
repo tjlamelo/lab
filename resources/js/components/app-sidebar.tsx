@@ -133,9 +133,9 @@ export function AppSidebar() {
                 </SidebarMenu>
             </SidebarHeader>
 
-            <SidebarContent>
+            {/* <SidebarContent>
                 <NavMain items={mainNavItems}/>
-            </SidebarContent>
+            </SidebarContent> */}
 
             <SidebarFooter>
                 <NavUser />
