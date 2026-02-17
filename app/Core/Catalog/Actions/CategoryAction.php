@@ -10,8 +10,7 @@ use Illuminate\Http\UploadedFile; // CRUCIAL : Sans cet import, instanceof écho
 use Illuminate\Support\Facades\Log;
  
 
-// ...
-
+ 
 final class CategoryAction
 {
     public function store(CategoryDto $dto): Category

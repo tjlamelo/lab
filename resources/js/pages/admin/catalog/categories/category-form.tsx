@@ -134,32 +134,76 @@ const handleSubmit = (e: React.FormEvent) => {
                                         <h2 className="text-3xl font-bold">{__('Localization Content')}</h2>
                                     </div>
 
-                                 <div className="space-y-2">
-    <Label className="text-[11px] font-bold text-muted-foreground uppercase">{__('Category Name')}</Label>
-    <Input 
-        className="h-14 border-2 text-lg" 
-        value={data.name[currentLang]}
-        onChange={(e) => setData('name', { ...data.name, [currentLang]: e.target.value })}
-        placeholder={__('Enter name...')} 
-    />
-    {/* On vérifie que l'erreur existe ET que c'est une string avant d'afficher */}
-    {errors[`name.${currentLang}`] && typeof errors[`name.${currentLang}`] === 'string' && (
-        <p className="text-xs text-destructive font-bold">{errors[`name.${currentLang}`]}</p>
-    )}
-</div>
+                                    <div className="space-y-2">
+                                        <Label className="text-[11px] font-bold text-muted-foreground uppercase">
+                                            {__('Category Name')}
+                                        </Label>
+                                        <Input
+                                            className="h-14 border-2 text-lg"
+                                            value={data.name[currentLang]}
+                                            onChange={(e) =>
+                                                setData('name', {
+                                                    ...data.name,
+                                                    [currentLang]: e.target.value,
+                                                })
+                                            }
+                                            placeholder={__('Enter name...')}
+                                        />
+                                        {errors[`name.${currentLang}`] &&
+                                            typeof errors[`name.${currentLang}`] === 'string' && (
+                                                <p className="text-xs text-destructive font-bold">
+                                                    {errors[`name.${currentLang}`]}
+                                                </p>
+                                            )}
+                                    </div>
 
-                                  <div className="space-y-2">
-    <Label className="text-[11px] font-bold text-muted-foreground uppercase">{__('Description')}</Label>
-    <Textarea 
-        rows={6} 
-        className="border-2" 
-        value={data.description[currentLang]}
-        onChange={(e) => setData('description', { ...data.description, [currentLang]: e.target.value })} 
-    />
-    {errors[`description.${currentLang}`] && typeof errors[`description.${currentLang}`] === 'string' && (
-        <p className="text-xs text-destructive font-bold">{errors[`description.${currentLang}`]}</p>
-    )}
-</div>
+                                    <div className="space-y-2">
+                                        <Label className="text-[11px] font-bold text-muted-foreground uppercase">
+                                            {__('Description')}
+                                        </Label>
+                                        <Textarea
+                                            rows={6}
+                                            className="border-2"
+                                            value={data.description[currentLang]}
+                                            onChange={(e) =>
+                                                setData('description', {
+                                                    ...data.description,
+                                                    [currentLang]: e.target.value,
+                                                })
+                                            }
+                                        />
+                                        {errors[`description.${currentLang}`] &&
+                                            typeof errors[`description.${currentLang}`] === 'string' && (
+                                                <p className="text-xs text-destructive font-bold">
+                                                    {errors[`description.${currentLang}`]}
+                                                </p>
+                                            )}
+                                    </div>
+
+                                    {/* Mobile-friendly step navigation */}
+                                    <div className="mt-8 flex items-center justify-between gap-3 md:justify-end">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={prevStep}
+                                            disabled={step === 0}
+                                            className="flex-1 md:flex-none"
+                                        >
+                                            {__('Previous')}
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            onClick={nextStep}
+                                            disabled={step === totalSteps}
+                                            className="flex-1 md:flex-none"
+                                        >
+                                            {step === totalSteps - 1
+                                                ? __('Continue to global settings')
+                                                : __('Next')}
+                                        </Button>
+                                    </div>
                                 </div>
                             ) : (
                                 /* ÉTAPE : CONFIGURATION GLOBALE */
@@ -194,16 +238,16 @@ const handleSubmit = (e: React.FormEvent) => {
     </Label>
   <Select value={data.parent_id} onValueChange={(val) => setData('parent_id', val)}>
     <SelectTrigger className={`h-12 border-2 ${errors.parent_id ? 'border-destructive' : ''}`}>
-        <SelectValue placeholder={__('Sélectionner un parent')} />
+        <SelectValue placeholder={__('Select parent category')} />
     </SelectTrigger>
   <SelectContent>
-    <SelectItem value="null">{__('Aucune (Catégorie racine)')}</SelectItem>
+  <SelectItem value="null">{__('None (root category)')}</SelectItem>
     {/* Ajout d'une vérification optionnelle avec ?.map ou Array.isArray */}
     {Array.isArray(parentCategories) && parentCategories.map((parent) => (
         <SelectItem key={parent.id} value={parent.id.toString()}>
             {typeof parent.name === 'object' 
                 ? (parent.name?.en || parent.name?.fr) 
-                : (parent.name || 'Sans nom')}
+                : (parent.name || 'Untitled')}
         </SelectItem>
     ))}
 </SelectContent>

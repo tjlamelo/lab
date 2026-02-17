@@ -38,7 +38,7 @@ return [
     // Indicates whether you need to sort the translations alphabetically
     // by original strings (keys).
     // It helps navigate a translation file and detect possible duplicates.
-    'sort-keys' => true,
+    'sort-keys' => false,
 
     // Indicates whether keys from the persistent-strings file should be also added
     // to translation files automatically on export if they don't yet exist there.

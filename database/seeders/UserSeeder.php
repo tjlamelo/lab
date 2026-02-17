@@ -48,18 +48,18 @@ class UserSeeder extends Seeder
 
         // 2. Création de clients (Rôle par défaut : customer)
         // On crée 50 clients via la factory
-        User::factory(50)->create([
-            'is_active' => true,
-        ])->each(function ($user) {
-            $user->assignRole('customer');
-        });
+        // User::factory(50)->create([
+        //     'is_active' => true,
+        // ])->each(function ($user) {
+        //     $user->assignRole('customer');
+        // });
 
         // 3. Création de quelques clients inactifs pour tes tests d'interface
-        User::factory(5)->create([
-            'name' => 'Client Inactif',
-            'is_active' => false,
-        ])->each(function ($user) {
-            $user->assignRole('customer');
-        });
+        // User::factory(5)->create([
+        //     'name' => 'Client Inactif',
+        //     'is_active' => false,
+        // ])->each(function ($user) {
+        //     $user->assignRole('customer');
+        // });
     }
 }

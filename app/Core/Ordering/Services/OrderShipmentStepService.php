@@ -8,8 +8,7 @@ use App\Core\Ordering\Actions\OrderShipmentStepAction;
 use App\Core\Ordering\Dto\OrderShipmentStepDto;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
-
+ 
 final class OrderShipmentStepService
 {
     private const CACHE_KEY = 'order_tracking_';
@@ -108,8 +107,7 @@ public function createCustomRoute(Order $order, array $stops): void
     public function updateStep(int $stepId, array $data): void
     {
         try {
-            Log::info("Début updateStep pour ID #{$stepId}", ['data_received' => $data]);
-
+             
             $step = OrderShipmentStep::findOrFail($stepId); 
             
             // Fusion des données existantes avec les nouvelles pour le DTO
@@ -120,11 +118,9 @@ public function createCustomRoute(Order $order, array $stops): void
             
             $this->clearCache($step->order_id);
 
-            Log::info("UpdateStep réussi pour ID #{$stepId}");
-
+         
         } catch (\Exception $e) {
-            Log::error("Erreur critique lors de updateStep #{$stepId}: " . $e->getMessage());
-            throw $e;
+             throw $e;
         }
     }
 
@@ -144,34 +140,21 @@ public function createCustomRoute(Order $order, array $stops): void
 // Dans OrderShipmentStepService::removeStep()
    public function removeStep(int $stepId): void
     {
-        Log::info('[OrderShipmentStepService::removeStep] ENTRY', ['step_id' => $stepId]);
-
+        
         $step = OrderShipmentStep::find($stepId);
 
-        Log::info('[OrderShipmentStepService::removeStep] AFTER find', [
-            'step_id'    => $stepId,
-            'found'      => $step !== null,
-            'step_key'   => $step?->getKey(),
-            'order_id'   => $step?->order_id,
-        ]);
-
+  
         if (!$step) {
-            Log::warning('[OrderShipmentStepService::removeStep] Step not found', [
-                'step_id'           => $stepId,
-                'all_step_ids_in_db' => OrderShipmentStep::pluck('id')->toArray(),
-            ]);
+         
             throw new \Exception("Shipment step #{$stepId} not found");
         }
 
         $orderId = $step->order_id;
-        Log::info('[OrderShipmentStepService::removeStep] Calling Action::delete', [
-            'step_id' => $stepId,
-            'order_id' => $orderId,
-        ]);
+  
 
         OrderShipmentStepAction::delete($step);
 
-        Log::info('[OrderShipmentStepService::removeStep] SUCCESS', ['step_id' => $stepId]);
+       
         $this->clearCache($orderId);
     }
 

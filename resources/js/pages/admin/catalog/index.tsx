@@ -28,22 +28,22 @@ export default function Index({ products }: any) {
 
     const handleDelete = (e: React.MouseEvent, slug: string) => {
         e.stopPropagation();
-        if (confirm(__('Voulez-vous supprimer ce produit ?'))) {
+        if (confirm(__('Do you really want to delete this product?'))) {
             // Utilisation systématique du SLUG
             router.delete(productsRoute.destroy(slug).url);
         }
     };
 
     return (
-        <AppLayout breadcrumbs={[{ title: __('Catalogue'), href: productsRoute.index().url }]}>
-            <Head title={__('Gestion des Produits')} />
+        <AppLayout breadcrumbs={[{ title: __('Catalog'), href: productsRoute.index().url }]}>
+            <Head title={__('Product Management')} />
             
             <div className="flex flex-col gap-6 px-4 py-8 md:px-8">
                 <div className="flex items-center justify-between">
-                    <Heading title={__('Inventaire')} description={__('Gérez vos réactifs et produits chimiques.')} />
+                    <Heading title={__('Inventory')} description={__('Manage your reagents and chemical products.')} />
                     <Link href={productsRoute.create().url}>
                         <Button className="gap-2 shadow-sm">
-                            <Plus className="size-4" /> {__('Nouveau Produit')}
+                            <Plus className="size-4" /> {__('New Product')}
                         </Button>
                     </Link>
                 </div>
@@ -53,10 +53,10 @@ export default function Index({ products }: any) {
                         <TableHeader className="bg-muted/50">
                             <TableRow>
                                 <TableHead className="w-10"></TableHead>
-                                <TableHead>{__('Produit')}</TableHead>
-                                <TableHead>{__('Prix')}</TableHead>
+                                <TableHead>{__('Product')}</TableHead>
+                                <TableHead>{__('Price')}</TableHead>
                                 <TableHead>{__('Stock')}</TableHead>
-                                <TableHead>{__('Statut')}</TableHead>
+                                <TableHead>{__('Status')}</TableHead>
                                 <TableHead className="text-right">{__('Actions')}</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -89,7 +89,7 @@ export default function Index({ products }: any) {
                                                     variant={p.is_active ? "default" : "secondary"}
                                                     className="cursor-pointer"
                                                 >
-                                                    {p.is_active ? __('Actif') : __('Inactif')}
+                                                    {p.is_active ? __('Active') : __('Inactive')}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
@@ -123,17 +123,17 @@ export default function Index({ products }: any) {
                                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                                         <div className="space-y-1">
                                                             <h4 className="text-[10px] font-bold text-primary uppercase tracking-widest">{__('Description')}</h4>
-                                                            <p className="text-sm text-muted-foreground italic leading-relaxed">{p.description || __('Aucune description.')}</p>
+                                                            <p className="text-sm text-muted-foreground italic leading-relaxed">{p.description || __('No description provided.')}</p>
                                                         </div>
                                                         <div className="space-y-2">
                                                             <div className="flex flex-wrap gap-2">
-                                                                <Badge variant="secondary">Pureté: {p.purity || '99%'}</Badge>
+                                                                <Badge variant="secondary">{__('Purity')}: {p.purity || '99%'}</Badge>
                                                             </div>
                                                         </div>
                                                         <div className="flex items-center justify-end">
                                                             <Link href={productsRoute.show(p.slug).url}>
                                                                 <Button size="sm" variant="outline" className="gap-2">
-                                                                    <Info className="size-4" /> {__('Voir Fiche Complète')}
+                                                                    <Info className="size-4" /> {__('View full details')}
                                                                 </Button>
                                                             </Link>
                                                         </div>
@@ -144,10 +144,10 @@ export default function Index({ products }: any) {
                                     </React.Fragment>
                                 ))
                             ) : (
-                                <TableRow>
+                                    <TableRow>
                                     <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
                                         <PackageSearch className="size-10 mx-auto mb-2 opacity-20" />
-                                        <p>{__('Aucun produit trouvé.')}</p>
+                                        <p>{__('No products found.')}</p>
                                     </TableCell>
                                 </TableRow>
                             )}

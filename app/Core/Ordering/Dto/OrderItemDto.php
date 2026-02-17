@@ -17,7 +17,6 @@ final class OrderItemDto implements JsonSerializable
 
     public static function fromArray(array $data): self
     {
-        \Illuminate\Support\Facades\Log::debug('Données brutes reçues par le DTO:', $data);
         return new self(
             // Mapping flexible : priorité au camelCase (interne/Redis) puis snake_case (Request)
             productId: $data['productId'] ?? $data['product_id'],
