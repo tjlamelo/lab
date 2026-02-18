@@ -64,7 +64,7 @@ class CartController extends Controller
 
         $validated = $request->validate([
             'product_id'   => 'required|integer',
-            'quantity'     => 'required|numeric|min:0.1', // Changé en numeric pour le support du KG (0.5)
+            'quantity'     => 'required|numeric|min:0.1|max:100', // max global 100
             'price'        => 'required|numeric',
             'product_name' => 'required|string',
             'product_image'=> 'nullable|string',

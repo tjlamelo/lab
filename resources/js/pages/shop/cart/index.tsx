@@ -55,8 +55,11 @@ export default function Index({ cart }: Props) {
         setQuantityValues(initialValues);
     }, [cart.items]);
 
+    const MAX_QUANTITY = 100;
+
     const updateQuantity = useCallback((item: CartItem, newQuantity: number) => {
         if (newQuantity < 1) return;
+        if (newQuantity > MAX_QUANTITY) newQuantity = MAX_QUANTITY;
         
         setUpdatingQuantities(prev => new Set(prev).add(item.productId));
         
@@ -91,7 +94,13 @@ export default function Index({ cart }: Props) {
         // Valider et mettre à jour si c'est un nombre valide
         const numValue = parseInt(value, 10);
         if (!isNaN(numValue) && numValue > 0) {
-            updateQuantity(item, numValue);
+            let clamped = Math.min(numValue, MAX_QUANTITY);
+
+            if (isCaluanieItem(item)) {
+                clamped = getClosestCaluanieQty(clamped);
+            }
+
+            updateQuantity(item, clamped);
         }
     }, [updateQuantity]);
 
@@ -117,9 +126,10 @@ export default function Index({ cart }: Props) {
         const currentValue = quantityValues[productId];
         const numValue = parseInt(currentValue || '0', 10);
         if (!isNaN(numValue) && numValue > 0) {
+            const clamped = Math.min(numValue, MAX_QUANTITY);
             const item = cart.items.find(i => i.productId === productId);
             if (item) {
-                updateQuantity(item, numValue);
+                updateQuantity(item, clamped);
             }
         } else {
             // Réinitialiser à la valeur précédente si invalide
@@ -150,6 +160,79 @@ export default function Index({ cart }: Props) {
     }, []);
 
     const formatUSD = (val: number) => `$${val.toFixed(2)}`;
+
+    // --- PRICING SPÉCIFIQUE CALUANIE ---
+    const isCaluanieItem = (item: CartItem) =>
+        item.productNameAtPurchase?.toLowerCase().includes('caluanie');
+
+    const caluaniePricing: Record<number, number> = {
+        1: 1000,
+        2: 1800,
+        5: 9000,
+        10: 18000,
+        15: 27000,
+        20: 36000,
+        25: 45000,
+        30: 54000,
+        35: 63000,
+        40: 72000,
+        45: 81000,
+        50: 90000,
+        55: 99000,
+        60: 108000,
+        65: 117000,
+        70: 126000,
+        75: 135000,
+        80: 144000,
+        85: 153000,
+        90: 162000,
+        95: 171000,
+        100: 180000,
+    };
+
+    const caluanieTiers = Object.keys(caluaniePricing)
+        .map((k) => parseInt(k, 10))
+        .sort((a, b) => a - b);
+
+    const getClosestCaluanieQty = (qty: number) => {
+        let closest = caluanieTiers[0];
+        let minDiff = Math.abs(qty - closest);
+
+        for (const t of caluanieTiers) {
+            const diff = Math.abs(qty - t);
+            if (diff < minDiff) {
+                minDiff = diff;
+                closest = t;
+            }
+        }
+        return closest;
+    };
+
+    const getNextCaluanieQty = (qty: number) => {
+        const current = getClosestCaluanieQty(qty);
+        const index = caluanieTiers.indexOf(current);
+        if (index === -1) return current;
+        return caluanieTiers[Math.min(index + 1, caluanieTiers.length - 1)];
+    };
+
+    const getPrevCaluanieQty = (qty: number) => {
+        const current = getClosestCaluanieQty(qty);
+        const index = caluanieTiers.indexOf(current);
+        if (index === -1) return current;
+        return caluanieTiers[Math.max(index - 1, 0)];
+    };
+
+    const getCaluanieLineTotal = (quantity: number, unitPrice: number) => {
+        const liters = getClosestCaluanieQty(quantity);
+        return caluaniePricing[liters];
+    };
+
+    const getItemLineTotal = (item: CartItem) => {
+        if (isCaluanieItem(item)) {
+            return getCaluanieLineTotal(item.quantity, item.price);
+        }
+        return item.price * item.quantity;
+    };
 
     // Animation variants
     const containerVariants = {
@@ -262,7 +345,11 @@ export default function Index({ cart }: Props) {
                                                                         <button
                                                                             type="button"
                                                                             className="flex h-full w-8 md:w-10 items-center justify-center transition hover:bg-muted"
-                                                                            onClick={() => updateQuantity(item, item.quantity - 1)}
+                                                                            onClick={() =>
+                                                                                isCaluanieItem(item)
+                                                                                    ? updateQuantity(item, getPrevCaluanieQty(item.quantity))
+                                                                                    : updateQuantity(item, item.quantity - 1)
+                                                                            }
                                                                             disabled={updatingQuantities.has(item.productId)}
                                                                             aria-label={__('Decrease quantity')}
                                                                         >
@@ -314,9 +401,13 @@ export default function Index({ cart }: Props) {
 
                                                                     <button
                                                                         type="button"
-                                                                        className="flex h-full w-8 md:w-10 items-center justify-center transition hover:bg-muted"
-                                                                        onClick={() => updateQuantity(item, item.quantity + 1)}
-                                                                        disabled={updatingQuantities.has(item.productId)}
+                                                                        className="flex h-full w-8 md:w-10 items-center justify-center transition hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                        onClick={() =>
+                                                                            isCaluanieItem(item)
+                                                                                ? updateQuantity(item, getNextCaluanieQty(item.quantity))
+                                                                                : updateQuantity(item, item.quantity + 1)
+                                                                        }
+                                                                        disabled={updatingQuantities.has(item.productId) || item.quantity >= MAX_QUANTITY}
                                                                         aria-label={__('Increase quantity')}
                                                                     >
                                                                         <Plus className="h-4 w-4" />
@@ -331,10 +422,13 @@ export default function Index({ cart }: Props) {
 
                                                     <div className="flex flex-col items-end justify-between">
                                                         <p className="font-semibold text-base md:text-lg text-foreground">
-                                                            {formatUSD(item.price * item.quantity)}
+                                                            {formatUSD(getItemLineTotal(item))}
                                                         </p>
                                                         <p className="text-xs md:text-sm text-muted-foreground">
-                                                            {formatUSD(item.price)} / {item.unitAtPurchase || 'unit'}
+                                                            {isCaluanieItem(item)
+                                                                ? `${formatUSD(getItemLineTotal(item) / item.quantity)} / ${item.unitAtPurchase || 'unit'}`
+                                                                : `${formatUSD(item.price)} / ${item.unitAtPurchase || 'unit'}`
+                                                            }
                                                         </p>
                                                     </div>
                                                 </div>

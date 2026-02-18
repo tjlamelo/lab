@@ -41,6 +41,7 @@ export default function ShowProduct({ product, relatedProducts = [] }: ProductSh
     const isWeightBased = product.unit?.toLowerCase() === 'kg';
     const step = isWeightBased ? 0.5 : 1;
     const minQuantity = step;
+    const maxQuantity = 100;
 
     // --- GESTION DES IMAGES ---
     const images = product.images && product.images.length > 0 
@@ -130,6 +131,59 @@ export default function ShowProduct({ product, relatedProducts = [] }: ProductSh
 
     const schemaForLocale = meta.schema?.[locale] || null;
 
+    // --- PRICING SPÉCIFIQUE CALUANIE ---
+    const CALUANIE_SLUG = 'caluanie-muelear-oxidize';
+
+    const caluaniePricing: Record<number, number> = {
+        1: 1000,
+        2: 1800,
+        5: 9000,
+        10: 18000,
+        15: 27000,
+        20: 36000,
+        25: 45000,
+        30: 54000,
+        35: 63000,
+        40: 72000,
+        45: 81000,
+        50: 90000,
+        55: 99000,
+        60: 108000,
+        65: 117000,
+        70: 126000,
+        75: 135000,
+        80: 144000,
+        85: 153000,
+        90: 162000,
+        95: 171000,
+        100: 180000,
+    };
+
+    const isCaluanie = product?.slug === CALUANIE_SLUG;
+
+    const caluanieQuantities = Object.keys(caluaniePricing)
+        .map((k) => parseInt(k, 10))
+        .sort((a, b) => a - b);
+
+    const getClosestCaluanieQty = (qty: number) => {
+        let closest = caluanieQuantities[0];
+        let minDiff = Math.abs(qty - closest);
+
+        for (const q of caluanieQuantities) {
+            const diff = Math.abs(qty - q);
+            if (diff < minDiff) {
+                minDiff = diff;
+                closest = q;
+            }
+        }
+        return closest;
+    };
+
+    const getCaluanieSubtotal = (qty: number) => {
+        const closest = getClosestCaluanieQty(qty);
+        return caluaniePricing[closest];
+    };
+
     // --- GESTION DE LA QUANTITÉ ---
     const startEditingQuantity = useCallback(() => {
         setIsEditingQuantity(true);
@@ -146,30 +200,59 @@ export default function ShowProduct({ product, relatedProducts = [] }: ProductSh
         const numValue = parseFloat(quantity);
         if (isNaN(numValue) || numValue < minQuantity) {
             setQuantity(minQuantity.toString());
+        } else if (numValue > maxQuantity) {
+            setQuantity(maxQuantity.toString());
         }
-    }, [quantity, minQuantity]);
+    }, [quantity, minQuantity, maxQuantity]);
 
-    const handleQuantityChange = useCallback((value: string) => {
-        setQuantity(value);
-        
-        // Valider et mettre à jour si c'est un nombre valide
-        const numValue = parseFloat(value);
-        if (!isNaN(numValue) && numValue >= minQuantity) {
-            // La quantité est valide
-        }
-    }, [minQuantity]);
+    const handleQuantityChange = useCallback(
+        (value: string) => {
+            const numValue = parseFloat(value);
+            if (isNaN(numValue)) {
+                setQuantity(value);
+                return;
+            }
+
+            let clamped = Math.min(Math.max(numValue, minQuantity), maxQuantity);
+
+            if (isCaluanie) {
+                clamped = getClosestCaluanieQty(clamped);
+            }
+
+            setQuantity(clamped.toString());
+        },
+        [minQuantity, maxQuantity, isCaluanie],
+    );
 
     const decreaseQuantity = useCallback(() => {
         const currentQuantity = parseFloat(quantity);
+
+        if (isCaluanie) {
+            const current = getClosestCaluanieQty(currentQuantity);
+            const currentIndex = caluanieQuantities.indexOf(current);
+            const nextIndex = Math.max(0, currentIndex - 1);
+            setQuantity(caluanieQuantities[nextIndex].toString());
+            return;
+        }
+
         const newQuantity = Math.max(minQuantity, currentQuantity - step);
         setQuantity(newQuantity.toString());
-    }, [quantity, step, minQuantity]);
+    }, [quantity, step, minQuantity, isCaluanie]);
 
     const increaseQuantity = useCallback(() => {
         const currentQuantity = parseFloat(quantity);
-        const newQuantity = currentQuantity + step;
+
+        if (isCaluanie) {
+            const current = getClosestCaluanieQty(currentQuantity);
+            const currentIndex = caluanieQuantities.indexOf(current);
+            const nextIndex = Math.min(caluanieQuantities.length - 1, currentIndex + 1);
+            setQuantity(caluanieQuantities[nextIndex].toString());
+            return;
+        }
+
+        const newQuantity = Math.min(maxQuantity, currentQuantity + step);
         setQuantity(newQuantity.toString());
-    }, [quantity, step]);
+    }, [quantity, step, maxQuantity, isCaluanie]);
 
     // --- AJOUT AU PANIER ---
     const handleAddToCart = useCallback(() => {
@@ -177,7 +260,7 @@ export default function ShowProduct({ product, relatedProducts = [] }: ProductSh
 
         // Validation finale de la quantité
         const finalQuantity = parseFloat(quantity);
-        if (isNaN(finalQuantity) || finalQuantity < minQuantity) {
+        if (isNaN(finalQuantity) || finalQuantity < minQuantity || finalQuantity > maxQuantity) {
             setIsAdding(false);
             return;
         }
@@ -213,7 +296,7 @@ export default function ShowProduct({ product, relatedProducts = [] }: ProductSh
 
     // --- CALCULS ---
     const currentQuantity = parseFloat(quantity) || minQuantity;
-    const subtotal = product.price * currentQuantity;
+    const subtotal = isCaluanie ? getCaluanieSubtotal(currentQuantity) : product.price * currentQuantity;
 
     // --- TOGGLE FAVORI ---
     const toggleFavorite = useCallback(() => {
@@ -399,7 +482,8 @@ export default function ShowProduct({ product, relatedProducts = [] }: ProductSh
 
                                         <button 
                                             onClick={increaseQuantity}
-                                            className="flex h-10 w-10 items-center justify-center transition hover:bg-muted"
+                                            className="flex h-10 w-10 items-center justify-center transition hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
+                                            disabled={currentQuantity >= maxQuantity}
                                         >
                                             <Plus className="h-4 w-4" />
                                         </button>

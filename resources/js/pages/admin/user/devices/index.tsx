@@ -67,30 +67,31 @@ export default function UserDevicesIndex({ user, devices }: Props) {
     <AppLayout>
       <Head title={__('User Devices')} />
 
-      <div className="space-y-6">
-        <Heading
-          title={__('User Devices')}
-          description={`${user.name} • ${user.email}`}
-        />
+      <div className="px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl space-y-6">
+          <Heading
+            title={__('User Devices')}
+            description={`${user.name} • ${user.email}`}
+          />
 
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Link href={`/${currentLocale}/admin/users`}>
-            <Button variant="outline">{__('Back to users')}</Button>
-          </Link>
-        </div>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Link href={`/${currentLocale}/admin/users`}>
+              <Button variant="outline">{__('Back to users')}</Button>
+            </Link>
+          </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BadgeCheck className="size-5 text-primary" />
-              {__('Devices')}
-              <Badge variant="secondary" className="ml-2">
-                {devices?.length ?? 0}
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto rounded-md border">
+          <Card>
+            <CardHeader className="px-4 sm:px-6">
+              <CardTitle className="flex items-center gap-2">
+                <BadgeCheck className="size-5 text-primary" />
+                {__('Devices')}
+                <Badge variant="secondary" className="ml-2">
+                  {devices?.length ?? 0}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 sm:px-6">
+              <div className="overflow-x-auto rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -180,6 +181,7 @@ export default function UserDevicesIndex({ user, devices }: Props) {
             </div>
           </CardContent>
         </Card>
+        </div>
       </div>
     </AppLayout>
   );
