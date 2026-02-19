@@ -12,36 +12,38 @@ final class PaymentMethodAction
     /**
      * Crée un nouveau mode de paiement.
      */
-    public static function create(PaymentMethodDto $dto): PaymentMethod
-    {
-        return DB::transaction(function () use ($dto) {
-            return PaymentMethod::create([
-                'name'         => $dto->name,
-                'slug'         => $dto->slug ?: Str::slug($dto->name),
-                'instructions' => $dto->instructions,
-                'logo'         => $dto->logo,
-                'is_active'    => $dto->isActive,
-            ]);
-        });
-    }
+public static function create(PaymentMethodDto $dto): PaymentMethod
+{
+    return DB::transaction(function () use ($dto) {
+        return PaymentMethod::create([
+            'name'           => $dto->name,
+            'slug'           => $dto->slug ?: Str::slug($dto->name),
+            'instructions'   => $dto->instructions,
+            'payment_details'=> $dto->paymentDetails,  
+            'logo'           => $dto->logo,
+            'is_active'      => $dto->isActive,
+        ]);
+    });
+}
 
     /**
      * Met à jour un mode de paiement existant.
      */
-    public static function update(PaymentMethod $paymentMethod, PaymentMethodDto $dto): void
-    {
-        DB::transaction(function () use ($paymentMethod, $dto) {
-            $paymentMethod->refresh()->lockForUpdate();
+public static function update(PaymentMethod $paymentMethod, PaymentMethodDto $dto): void
+{
+    DB::transaction(function () use ($paymentMethod, $dto) {
+        $paymentMethod->refresh()->lockForUpdate();
 
-            $paymentMethod->update([
-                'name'         => $dto->name,
-                'slug'         => $dto->slug,
-                'instructions' => $dto->instructions,
-                'logo'         => $dto->logo,
-                'is_active'    => $dto->isActive,
-            ]);
-        });
-    }
+        $paymentMethod->update([
+            'name'           => $dto->name,
+            'slug'           => $dto->slug,
+            'instructions'   => $dto->instructions,
+            'payment_details'=> $dto->paymentDetails,  
+            'logo'           => $dto->logo,
+            'is_active'      => $dto->isActive,
+        ]);
+    });
+}
 
     /**
      * Alterne l'état actif/inactif (Toggle).
