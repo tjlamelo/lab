@@ -28,7 +28,7 @@ final class ProductService
         return $this->action->update($product, $dto);
     }
     // --- RECHERCHE ET FILTRES DYNAMIQUE SELON LA LANGUE ---
-/**
+    /**
      * Liste les produits avec pagination et relations
      * * @param int $perPage Nombre d'éléments par page
      * @param array $filters Filtres optionnels (statut, catégorie, etc.)
@@ -52,66 +52,72 @@ final class ProductService
         // Exécution de la pagination
         return $query->paginate($perPage);
     }
-public function search(array $filters): LengthAwarePaginator
+    public function search(array $filters): LengthAwarePaginator
     {
         $query = Product::query();
         $locale = app()->getLocale();
+        $driver = $query->getConnection()->getDriverName(); // Détecte sqlite ou mysql
 
         if (!empty($filters['search'])) {
             $searchTerm = $filters['search'];
 
-            $query->where(function (Builder $q) use ($searchTerm, $locale) {
-                // 1. Recherche dans le nom (Langue active - Priorité Max)
-                $q->where("name->{$locale}", 'like', "%{$searchTerm}%")
-                    // 2. Recherche dans la description (Langue active)
-                    ->orWhere("description->{$locale}", 'like', "%{$searchTerm}%")
-                    // 3. Recherche globale (SKU, Slug)
+            $query->where(function (Builder $q) use ($searchTerm, $locale, $driver) {
+                // On définit la fonction d'extraction selon la DB
+                // SQLite n'a pas besoin (et ne supporte pas) JSON_UNQUOTE
+                $jsonFunction = $driver === 'sqlite'
+                    ? "JSON_EXTRACT(`name`, '$.$locale')"
+                    : "JSON_UNQUOTE(JSON_EXTRACT(`name`, '$.\"$locale\"'))";
+
+                $descFunction = $driver === 'sqlite'
+                    ? "JSON_EXTRACT(`description`, '$.$locale')"
+                    : "JSON_UNQUOTE(JSON_EXTRACT(`description`, '$.\"$locale\"'))";
+
+                $q->whereRaw("$jsonFunction LIKE ?", ["%{$searchTerm}%"])
+                    ->orWhereRaw("$descFunction LIKE ?", ["%{$searchTerm}%"])
                     ->orWhere('sku', 'like', "%{$searchTerm}%")
                     ->orWhere('slug', 'like', "%{$searchTerm}%")
-                    // 4. Recherche dans la catégorie
-                    ->orWhereHas('category', function ($cat) use ($searchTerm, $locale) {
-                        $cat->where("name->{$locale}", 'like', "%{$searchTerm}%")
-                           ->orWhere('name', 'like', "%{$searchTerm}%");
+                    ->orWhereHas('category', function ($cat) use ($searchTerm, $locale, $driver) {
+                        $catJson = $driver === 'sqlite'
+                            ? "JSON_EXTRACT(`name`, '$.$locale')"
+                            : "JSON_UNQUOTE(JSON_EXTRACT(`name`, '$.\"$locale\"'))";
+
+                        $cat->whereRaw("$catJson LIKE ?", ["%{$searchTerm}%"])
+                            ->orWhere('name', 'like', "%{$searchTerm}%");
                     });
             });
 
-            // TRI INTELLIGENT : On fait remonter ce qui commence par le terme dans la langue du client
+            // TRI : On adapte aussi le ORDER BY pour SQLite
+            $orderField = $driver === 'sqlite'
+                ? "JSON_EXTRACT(`name`, '$.$locale')"
+                : "JSON_UNQUOTE(JSON_EXTRACT(`name`, '$.\"$locale\"'))";
+
             $query->orderByRaw("CASE 
-                WHEN name->'$.{$locale}' LIKE '{$searchTerm}%' THEN 1 
-                WHEN name->'$.{$locale}' LIKE '%{$searchTerm}%' THEN 2 
-                ELSE 3 
-            END");
+            WHEN $orderField LIKE ? THEN 1 
+            WHEN $orderField LIKE ? THEN 2 
+            ELSE 3 
+        END", ["{$searchTerm}%", "%{$searchTerm}%"]);
         }
 
-        // Autres filtres
+        // ... reste du code (filtres category_id, is_active, etc.)
         $query->when($filters['category_id'] ?? null, fn($q, $id) => $q->where('category_id', $id));
         $query->when(isset($filters['is_active']), fn($q) => $q->where('is_active', $filters['is_active']));
-        $query->when(isset($filters['is_featured']), fn($q) => $q->where('is_featured', $filters['is_featured']));
-
-        // Si pas de recherche, tri par date
-        if (empty($filters['search'])) {
-            $sortField = $filters['sort_by'] ?? 'created_at';
-            $sortOrder = $filters['sort_order'] ?? 'desc';
-            $query->orderBy($sortField, $sortOrder);
-        }
 
         return $query->with('category')->paginate($filters['per_page'] ?? 15);
     }
-
     /**
- * Récupère un produit par son Slug ou son ID avec ses relations
- */
-public function findBySlugOrId(string|int $identifier): Product
-{
-    return Product::query()
-        ->with(['category']) // Charge la catégorie pour afficher le badge sur la page Show
-        ->where('is_active', true) // Sécurité : on ne veut pas qu'un client voie un produit désactivé via l'URL
-        ->where(function (Builder $q) use ($identifier) {
-            $q->where('slug', $identifier)
-              ->orWhere('id', $identifier);
-        })
-        ->firstOrFail(); // Renvoie une 404 si le produit n'existe pas ou est inactif
-}
+     * Récupère un produit par son Slug ou son ID avec ses relations
+     */
+    public function findBySlugOrId(string|int $identifier): Product
+    {
+        return Product::query()
+            ->with(['category']) // Charge la catégorie pour afficher le badge sur la page Show
+            ->where('is_active', true) // Sécurité : on ne veut pas qu'un client voie un produit désactivé via l'URL
+            ->where(function (Builder $q) use ($identifier) {
+                $q->where('slug', $identifier)
+                    ->orWhere('id', $identifier);
+            })
+            ->firstOrFail(); // Renvoie une 404 si le produit n'existe pas ou est inactif
+    }
 
 
     // --- APPELS VERS L'ACTION ---
