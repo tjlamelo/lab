@@ -13,6 +13,7 @@ use App\Core\Mailing\Dto\MailDto;
 use App\Mail\OrderConfirmationMail;
 use App\Mail\OrderShippedMail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -73,8 +74,8 @@ final class OrderService
             }
 
             if ($newStatus === OrderStatus::SHIPPING) {
-                // Commande expédiée
-                $this->mailService->sendMailable($order->user->email, new OrderShippedMail($order));
+                // Commande expédiée (en file d'attente pour éviter timeout en prod)
+                Mail::to($order->user->email)->queue(new OrderShippedMail($order));
             } elseif ($newStatus === OrderStatus::DELIVERED) {
                 // Commande livrée
                 $dto = new MailDto(
