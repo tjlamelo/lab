@@ -85,11 +85,15 @@ class AdminOrderController extends Controller
 
         $order = Order::findOrFail($id);
 
-        // Appel via le service
-        $this->orderService->updateStatus($order, OrderStatus::from($request->status));
-
-        return back()->with('success', __('Status updated.'));
+        try {
+            $this->orderService->updateStatus($order, OrderStatus::from($request->status));
+            return redirect()->route('admin.orders.show', $id)->with('success', __('Status updated.'));
+        } catch (\Throwable $e) {
+            report($e);
+            return redirect()->route('admin.orders.show', $id)->withErrors(['error' => $e->getMessage()]);
+        }
     }
+
     public function updatePaymentStatus(Request $request, $id)
     {
         $request->validate([
@@ -98,9 +102,12 @@ class AdminOrderController extends Controller
 
         $order = Order::findOrFail($id);
 
-        // Appel via le service
-        $this->orderService->updatePaymentStatus($order, PaymentStatus::from($request->payment_status));
-
-        return back()->with('success', __('Payment status updated.'));
+        try {
+            $this->orderService->updatePaymentStatus($order, PaymentStatus::from($request->payment_status));
+            return redirect()->route('admin.orders.show', $id)->with('success', __('Payment status updated.'));
+        } catch (\Throwable $e) {
+            report($e);
+            return redirect()->route('admin.orders.show', $id)->withErrors(['error' => $e->getMessage()]);
+        }
     }
 }
