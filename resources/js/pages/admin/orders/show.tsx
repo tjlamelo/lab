@@ -47,10 +47,10 @@ export default function Show({ order, config }: Props) {
     // Mise à jour Statut Logistique
     const updateStatus = (newStatus: string) => {
         const url = `/${currentLocale}/admin/orders/${order.id}/status`;
-        const payload = { status: newStatus };
-        console.log('[OrderStatus] PATCH request', { url, payload, orderId: order.id });
+        const payload = { _method: 'patch', status: newStatus };
+        console.log('[OrderStatus] POST(_method=PATCH) request', { url, payload, orderId: order.id });
         setProcessingType('status');
-        router.patch(url, payload, {
+        router.post(url, payload, {
             preserveScroll: true,
             onStart: () => console.log('[OrderStatus] PATCH onStart', { url }),
             onSuccess: () => console.log('[OrderStatus] PATCH onSuccess', { url }),
@@ -65,10 +65,10 @@ export default function Show({ order, config }: Props) {
     // Mise à jour Statut Paiement
     const updatePaymentStatus = (newStatus: string) => {
         const url = `/${currentLocale}/admin/orders/${order.id}/payment-status`;
-        const payload = { payment_status: newStatus };
-        console.log('[OrderPaymentStatus] PATCH request', { url, payload, orderId: order.id });
+        const payload = { _method: 'patch', payment_status: newStatus };
+        console.log('[OrderPaymentStatus] POST(_method=PATCH) request', { url, payload, orderId: order.id });
         setProcessingType('payment');
-        router.patch(url, payload, {
+        router.post(url, payload, {
             preserveScroll: true,
             onStart: () => console.log('[OrderPaymentStatus] PATCH onStart', { url }),
             onSuccess: () => console.log('[OrderPaymentStatus] PATCH onSuccess', { url }),

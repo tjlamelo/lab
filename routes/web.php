@@ -133,7 +133,11 @@ Route::group([
                     Route::get('/{id}', [AdminOrderController::class, 'show'])->name('show');
                     Route::post('/{id}/confirm-payment', [AdminOrderController::class, 'confirmPayment'])->name('confirm-payment');
                     Route::patch('/{id}/status', [AdminOrderController::class, 'updateStatus'])->name('update-status');
+                    // Some servers/WAFs break HTTP PATCH over HTTP/2. Allow POST + _method=PATCH as a robust fallback.
+                    Route::post('/{id}/status', [AdminOrderController::class, 'updateStatus'])->name('update-status.post');
                     Route::patch('/{id}/payment-status', [AdminOrderController::class, 'updatePaymentStatus'])->name('update-payment-status');
+                    // Same fallback for payment-status updates.
+                    Route::post('/{id}/payment-status', [AdminOrderController::class, 'updatePaymentStatus'])->name('update-payment-status.post');
                 });
 
                 // Gestion des Réseaux Sociaux

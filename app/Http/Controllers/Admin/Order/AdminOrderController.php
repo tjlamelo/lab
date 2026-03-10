@@ -93,7 +93,12 @@ class AdminOrderController extends Controller
         try {
             $this->orderService->updateStatus($order, OrderStatus::from($request->status));
             Log::info('AdminOrderController::updateStatus service done, redirecting', ['order_id' => $id]);
-            return redirect()->route('admin.orders.show', $id)->with('success', __('Status updated.'));
+            // 303 is the correct redirect after a non-GET (PATCH/POST),
+            // and avoids some HTTP/2 proxy/CDN issues with 302 after PATCH.
+            return redirect()
+                ->route('admin.orders.show', $id)
+                ->setStatusCode(303)
+                ->with('success', __('Status updated.'));
         } catch (\Throwable $e) {
             Log::error('AdminOrderController::updateStatus exception', [
                 'order_id' => $id,
@@ -101,7 +106,10 @@ class AdminOrderController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
             report($e);
-            return redirect()->route('admin.orders.show', $id)->withErrors(['error' => $e->getMessage()]);
+            return redirect()
+                ->route('admin.orders.show', $id)
+                ->setStatusCode(303)
+                ->withErrors(['error' => $e->getMessage()]);
         }
     }
 
@@ -117,7 +125,10 @@ class AdminOrderController extends Controller
         try {
             $this->orderService->updatePaymentStatus($order, PaymentStatus::from($request->payment_status));
             Log::info('AdminOrderController::updatePaymentStatus service done, redirecting', ['order_id' => $id]);
-            return redirect()->route('admin.orders.show', $id)->with('success', __('Payment status updated.'));
+            return redirect()
+                ->route('admin.orders.show', $id)
+                ->setStatusCode(303)
+                ->with('success', __('Payment status updated.'));
         } catch (\Throwable $e) {
             Log::error('AdminOrderController::updatePaymentStatus exception', [
                 'order_id' => $id,
@@ -125,7 +136,10 @@ class AdminOrderController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
             report($e);
-            return redirect()->route('admin.orders.show', $id)->withErrors(['error' => $e->getMessage()]);
+            return redirect()
+                ->route('admin.orders.show', $id)
+                ->setStatusCode(303)
+                ->withErrors(['error' => $e->getMessage()]);
         }
     }
 }
