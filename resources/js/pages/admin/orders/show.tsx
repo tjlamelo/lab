@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Head, router, Link } from '@inertiajs/react';
+import React, { useMemo, useState } from 'react';
+import { Head, router, Link, usePage } from '@inertiajs/react';
 import { useTranslate } from '@/lib/i18n';
 import adminOrders from '@/routes/admin/orders';
 import { 
@@ -27,6 +27,17 @@ interface Props {
 
 export default function Show({ order, config }: Props) {
     const { __ } = useTranslate();
+    const { props } = usePage();
+    const currentLocale = useMemo(() => {
+        const propsLocale = (props as any)?.locale;
+        if (typeof propsLocale === 'string') return propsLocale;
+        if (typeof window !== 'undefined') {
+            const pathParts = window.location.pathname.split('/').filter(Boolean);
+            const supportedLocales = ['en', 'fr', 'ar', 'ru', 'zh'];
+            if (pathParts.length > 0 && supportedLocales.includes(pathParts[0])) return pathParts[0];
+        }
+        return 'en';
+    }, [props]);
     const [processingType, setProcessingType] = useState<'status' | 'payment' | null>(null);
     const [activeTab, setActiveTab] = useState<'details' | 'payment'>('details');
 
@@ -35,7 +46,7 @@ export default function Show({ order, config }: Props) {
 
     // Mise à jour Statut Logistique
     const updateStatus = (newStatus: string) => {
-        const url = `/admin/orders/${order.id}/status`;
+        const url = `/${currentLocale}/admin/orders/${order.id}/status`;
         const payload = { status: newStatus };
         console.log('[OrderStatus] PATCH request', { url, payload, orderId: order.id });
         setProcessingType('status');
@@ -48,14 +59,12 @@ export default function Show({ order, config }: Props) {
                 console.log('[OrderStatus] PATCH onFinish', { url });
                 setProcessingType(null);
             },
-        }).catch((err) => {
-            console.error('[OrderStatus] PATCH promise rejected (network/server)', { url, error: err?.message ?? err });
         });
     };
 
     // Mise à jour Statut Paiement
     const updatePaymentStatus = (newStatus: string) => {
-        const url = `/admin/orders/${order.id}/payment-status`;
+        const url = `/${currentLocale}/admin/orders/${order.id}/payment-status`;
         const payload = { payment_status: newStatus };
         console.log('[OrderPaymentStatus] PATCH request', { url, payload, orderId: order.id });
         setProcessingType('payment');
@@ -68,8 +77,6 @@ export default function Show({ order, config }: Props) {
                 console.log('[OrderPaymentStatus] PATCH onFinish', { url });
                 setProcessingType(null);
             },
-        }).catch((err) => {
-            console.error('[OrderPaymentStatus] PATCH promise rejected (network/server)', { url, error: err?.message ?? err });
         });
     };
 
