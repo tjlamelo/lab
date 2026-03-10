@@ -35,19 +35,41 @@ export default function Show({ order, config }: Props) {
 
     // Mise à jour Statut Logistique
     const updateStatus = (newStatus: string) => {
+        const url = `/admin/orders/${order.id}/status`;
+        const payload = { status: newStatus };
+        console.log('[OrderStatus] PATCH request', { url, payload, orderId: order.id });
         setProcessingType('status');
-        router.patch(`/admin/orders/${order.id}/status`, { status: newStatus }, {
+        router.patch(url, payload, {
             preserveScroll: true,
-            onFinish: () => setProcessingType(null)
+            onStart: () => console.log('[OrderStatus] PATCH onStart', { url }),
+            onSuccess: () => console.log('[OrderStatus] PATCH onSuccess', { url }),
+            onError: (errors) => console.error('[OrderStatus] PATCH onError', { url, errors }),
+            onFinish: () => {
+                console.log('[OrderStatus] PATCH onFinish', { url });
+                setProcessingType(null);
+            },
+        }).catch((err) => {
+            console.error('[OrderStatus] PATCH promise rejected (network/server)', { url, error: err?.message ?? err });
         });
     };
 
     // Mise à jour Statut Paiement
     const updatePaymentStatus = (newStatus: string) => {
+        const url = `/admin/orders/${order.id}/payment-status`;
+        const payload = { payment_status: newStatus };
+        console.log('[OrderPaymentStatus] PATCH request', { url, payload, orderId: order.id });
         setProcessingType('payment');
-        router.patch(`/admin/orders/${order.id}/payment-status`, { payment_status: newStatus }, {
+        router.patch(url, payload, {
             preserveScroll: true,
-            onFinish: () => setProcessingType(null)
+            onStart: () => console.log('[OrderPaymentStatus] PATCH onStart', { url }),
+            onSuccess: () => console.log('[OrderPaymentStatus] PATCH onSuccess', { url }),
+            onError: (errors) => console.error('[OrderPaymentStatus] PATCH onError', { url, errors }),
+            onFinish: () => {
+                console.log('[OrderPaymentStatus] PATCH onFinish', { url });
+                setProcessingType(null);
+            },
+        }).catch((err) => {
+            console.error('[OrderPaymentStatus] PATCH promise rejected (network/server)', { url, error: err?.message ?? err });
         });
     };
 
