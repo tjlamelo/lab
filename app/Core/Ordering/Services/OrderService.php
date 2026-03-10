@@ -63,20 +63,25 @@ final class OrderService
      */
     public function updateStatus(Order $order, OrderStatus $newStatus): void
     {
-        // On pourrait ajouter ici des vérifications supplémentaires avant l'action
+        Log::info('OrderService::updateStatus start', ['order_id' => $order->id, 'new_status' => $newStatus->value]);
+
         OrderAction::updateStatus($order, $newStatus);
+        Log::info('OrderService::updateStatus OrderAction done', ['order_id' => $order->id]);
 
         // Notifications email selon le nouveau statut
         try {
             $order->loadMissing('user');
             if (!$order->user || !$order->user->email) {
+                Log::info('OrderService::updateStatus skip mail (no user/email)', ['order_id' => $order->id]);
                 return;
             }
 
             if ($newStatus === OrderStatus::SHIPPING) {
+                Log::info('OrderService::updateStatus queueing OrderShippedMail', ['order_id' => $order->id]);
                 // Commande expédiée (en file d'attente pour éviter timeout en prod)
                 Mail::to($order->user->email)->queue(new OrderShippedMail($order));
             } elseif ($newStatus === OrderStatus::DELIVERED) {
+                Log::info('OrderService::updateStatus queueing delivered mail', ['order_id' => $order->id]);
                 // Commande livrée
                 $dto = new MailDto(
                     to: $order->user->email,
@@ -92,6 +97,7 @@ final class OrderService
                 );
                 $this->mailService->queue($dto);
             }
+            Log::info('OrderService::updateStatus mail section done', ['order_id' => $order->id]);
         } catch (\Throwable $e) {
             Log::error('OrderService::updateStatus mail notification failed', [
                 'order_id' => $order->id,

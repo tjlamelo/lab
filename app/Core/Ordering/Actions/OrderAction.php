@@ -7,6 +7,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Core\Ordering\Dto\OrderDto;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 final class OrderAction
@@ -86,8 +87,12 @@ final class OrderAction
      */
     public static function updateStatus(Order $order, OrderStatus $newStatus): void
     {
+        Log::info('OrderAction::updateStatus start', ['order_id' => $order->id, 'new_status' => $newStatus->value]);
+
         DB::transaction(function () use ($order, $newStatus) {
+            Log::info('OrderAction::updateStatus transaction start', ['order_id' => $order->id]);
             $order->refresh()->lockForUpdate();
+            Log::info('OrderAction::updateStatus lock acquired', ['order_id' => $order->id]);
 
             // if ($order->status === OrderStatus::CANCELLED) {
             //     throw ValidationException::withMessages([
@@ -97,13 +102,16 @@ final class OrderAction
 
             if (in_array($newStatus, [OrderStatus::SHIPPING, OrderStatus::DELIVERED]) 
                 && $order->payment_status !== PaymentStatus::PAID) {
+                Log::warning('OrderAction::updateStatus rejected (ship/deliver without paid)', ['order_id' => $order->id]);
                 throw ValidationException::withMessages([
                     'status' => __('Cannot ship or deliver an order that has not been paid.')
                 ]);
             }
 
             $order->update(['status' => $newStatus]);
+            Log::info('OrderAction::updateStatus update done', ['order_id' => $order->id]);
         });
+        Log::info('OrderAction::updateStatus transaction committed', ['order_id' => $order->id]);
     }
 
     /**

@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Core\Ordering\Services\OrderService;
 use App\Models\Order;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rules\Enum;
 use Inertia\Inertia;
 
@@ -79,16 +80,26 @@ class AdminOrderController extends Controller
 
     public function updateStatus(Request $request, $id)
     {
+        Log::info('AdminOrderController::updateStatus start', ['order_id' => $id, 'status' => $request->input('status')]);
+
         $request->validate([
             'status' => ['required', new Enum(OrderStatus::class)]
         ]);
+        Log::info('AdminOrderController::updateStatus validation ok', ['order_id' => $id]);
 
         $order = Order::findOrFail($id);
+        Log::info('AdminOrderController::updateStatus order loaded', ['order_id' => $id]);
 
         try {
             $this->orderService->updateStatus($order, OrderStatus::from($request->status));
+            Log::info('AdminOrderController::updateStatus service done, redirecting', ['order_id' => $id]);
             return redirect()->route('admin.orders.show', $id)->with('success', __('Status updated.'));
         } catch (\Throwable $e) {
+            Log::error('AdminOrderController::updateStatus exception', [
+                'order_id' => $id,
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             report($e);
             return redirect()->route('admin.orders.show', $id)->withErrors(['error' => $e->getMessage()]);
         }
@@ -96,16 +107,23 @@ class AdminOrderController extends Controller
 
     public function updatePaymentStatus(Request $request, $id)
     {
+        Log::info('AdminOrderController::updatePaymentStatus start', ['order_id' => $id, 'payment_status' => $request->input('payment_status')]);
+
         $request->validate([
             'payment_status' => ['required', new Enum(PaymentStatus::class)]
         ]);
-
         $order = Order::findOrFail($id);
 
         try {
             $this->orderService->updatePaymentStatus($order, PaymentStatus::from($request->payment_status));
+            Log::info('AdminOrderController::updatePaymentStatus service done, redirecting', ['order_id' => $id]);
             return redirect()->route('admin.orders.show', $id)->with('success', __('Payment status updated.'));
         } catch (\Throwable $e) {
+            Log::error('AdminOrderController::updatePaymentStatus exception', [
+                'order_id' => $id,
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             report($e);
             return redirect()->route('admin.orders.show', $id)->withErrors(['error' => $e->getMessage()]);
         }
